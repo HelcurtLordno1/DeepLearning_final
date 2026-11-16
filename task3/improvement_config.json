@@ -1,0 +1,13 @@
+{
+  "name": "attention_position_finetune",
+  "position": true,
+  "attention": true,
+  "flat_context": false,
+  "augment": false,
+  "crop_mode": "bbox",
+  "learning_rate": 0.0001,
+  "epochs": 2,
+  "batch_size": 16,
+  "workers": 0,
+  "initial_checkpoint": "run/task3/cnn_gru_attention/42/20261116_203037_103880/best.pt"
+}

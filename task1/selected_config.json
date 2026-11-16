@@ -1,0 +1,15 @@
+{
+  "name": "lstm128_attention_residual",
+  "seed": 42,
+  "lookback": 48,
+  "cell": "LSTM",
+  "hidden_size": 128,
+  "attention": true,
+  "residual": true,
+  "dropout": 0.0,
+  "univariate": false,
+  "learning_rate": 0.001,
+  "batch_size": 64,
+  "epochs": 60,
+  "patience": 8
+}

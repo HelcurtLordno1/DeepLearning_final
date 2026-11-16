@@ -1,0 +1,10 @@
+{
+  "checked_at_utc": "2026-11-16T11:33:39.513594+00:00",
+  "project_drive": "D:",
+  "free_gib_before_download_approx": 80.47,
+  "free_gib_after_preparation": 76.88,
+  "original_plate_image_bytes": 3680307496,
+  "etth1_csv_bytes": 2589657,
+  "minimum_free_gib_used_for_preparation": 20,
+  "complete_source_archives_retained": false
+}

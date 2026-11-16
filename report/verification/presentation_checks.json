@@ -1,0 +1,32 @@
+[
+  {
+    "task": "task1",
+    "code_cells": 15,
+    "markdown_cells": 19,
+    "inline_figures": 4,
+    "stderr_outputs": 0,
+    "errors": 0,
+    "python_in_markdown": false,
+    "largest_code_cell_lines": 26
+  },
+  {
+    "task": "task2",
+    "code_cells": 16,
+    "markdown_cells": 20,
+    "inline_figures": 4,
+    "stderr_outputs": 0,
+    "errors": 0,
+    "python_in_markdown": false,
+    "largest_code_cell_lines": 25
+  },
+  {
+    "task": "task3",
+    "code_cells": 18,
+    "markdown_cells": 23,
+    "inline_figures": 4,
+    "stderr_outputs": 0,
+    "errors": 0,
+    "python_in_markdown": false,
+    "largest_code_cell_lines": 48
+  }
+]

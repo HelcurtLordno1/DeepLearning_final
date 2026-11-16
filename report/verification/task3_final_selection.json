@@ -1,0 +1,33 @@
+{
+  "selected_run": "run\\task3\\refined_spatial_cnn_gru\\42\\20261117_003013_172780",
+  "selected_on": "validation only",
+  "frozen_at": "2026-11-17T01:19:23.087553",
+  "checkpoints": [
+    {
+      "run": "run\\task3\\cnn_gru_attention\\42\\20261116_203037_103880",
+      "role": "baseline",
+      "checkpoint_sha256": "2bb24b70fe469c623dcaebbf119d3ccc3be39fd5e85343ceedcf351b6ed34b7f",
+      "config_sha256": "8e4c96f6b46e93f2b147e7e2d25222b979992aabdb02bf0640ce4ed31f56c40e"
+    },
+    {
+      "run": "run\\task3\\aligned_cnn_gru\\42\\20261116_235328_983621",
+      "role": "aligned_intermediate",
+      "checkpoint_sha256": "a4fd6d22e12792c07af173224423185140ea2cf5f1a727a86d5c0a7f89c345a9",
+      "config_sha256": "a89331befd357c13eed77da0c684c97b9349bb37281679484422fc23b5addc9d"
+    },
+    {
+      "run": "run\\task3\\refined_spatial_cnn_gru\\42\\20261117_003013_172780",
+      "role": "selected_model",
+      "checkpoint_sha256": "5257f68bf05d27b6db27ab74b490a7681d1e026327c0766e9642dd7433895b74",
+      "config_sha256": "c7636e8d6f153881a24ac2e1eceadc1cb82fab61cd4aa5da84663aabb71c2dae"
+    }
+  ],
+  "validation_plate_accuracy": 0.9543812709030101,
+  "validation_CER": 0.007912087912087912,
+  "last_completed_epoch": 12,
+  "best_epoch": 12,
+  "final_seeds": [
+    42
+  ],
+  "initialization": "shared training-only baseline checkpoint; fine-tuned model, not from-scratch independent runs"
+}

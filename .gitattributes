@@ -1,0 +1,7 @@
+# Preserve manifest and source bytes used by the saved SHA-256 checks.
+data/splits/** -text
+*.py -text
+*.ps1 -text
+*.ipynb -text
+*.png binary
+*.docx binary

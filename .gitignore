@@ -1,0 +1,25 @@
+# Downloaded datasets and generated large artifacts stay on this computer.
+data/raw/*
+!data/raw/README.md
+data/processed/
+results/
+run/
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+*.pyc
+
+# Local assignment references and agent instructions requested by the owner.
+/assignments/
+/AGENTS.md
+/project_replan.md
+/lessons_slides/
+
+# Local credentials and operating-system files.
+.env
+.env.*
+!.env.example
+*.pem
+*.pfx
+.DS_Store
+Thumbs.db

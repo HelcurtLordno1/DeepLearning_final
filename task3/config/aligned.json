@@ -1,0 +1,20 @@
+{
+  "name": "aligned_cnn_gru",
+  "architecture": "aligned",
+  "seed": 42,
+  "hidden_size": 128,
+  "attention": true,
+  "alignment": 0.5,
+  "position": false,
+  "flat_context": false,
+  "augment": false,
+  "crop_mode": "bbox",
+  "learning_rate": 0.0001,
+  "cnn_learning_rate": 0.00003,
+  "projection_learning_rate": 0.0003,
+  "batch_size": 16,
+  "workers": 0,
+  "epochs": 24,
+  "patience": 6,
+  "initial_checkpoint": "run/task3/cnn_gru_attention/42/20261116_203037_103880/best.pt"
+}

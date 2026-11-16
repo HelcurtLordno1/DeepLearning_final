@@ -1,0 +1,29 @@
+{
+  "checked": [
+    {
+      "task": "task1",
+      "checked_test_runs": 9,
+      "passed": true
+    },
+    {
+      "task": "task2",
+      "checked_test_runs": 9,
+      "passed": true
+    },
+    {
+      "task": "task3",
+      "checked_test_runs": 3,
+      "passed": true
+    }
+  ],
+  "all_three_tasks_finished": true,
+  "task3_frozen_checkpoint_hashes_match": true,
+  "task3_completed_fine_tuning_seeds": [
+    42
+  ],
+  "notebooks": {
+    "fresh_windows_kernels": 3,
+    "executed_without_errors": true,
+    "paired_model_attention_training_step_match": true
+  }
+}
