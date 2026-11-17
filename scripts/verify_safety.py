@@ -78,11 +78,9 @@ def main():
             if monitor.poll() is None:
                 monitor.terminate(); monitor.wait(timeout=10)
 
-        for name in ["src/utils.py", "scripts/run_experiments.py", "scripts/execute_notebooks.py", "scripts/make_notebooks.py",
-                     "scripts/verify_results.py", "scripts/verify_safety.py", "scripts/summarize_results.py", "scripts/audit_saved_artifacts.py",
-                     "task1/code/task1.py", "task2/code/task2.py", "task3/code/task3.py", "task3/code/train_advanced.py"]:
-            path = utils.ROOT/name
-            compile(path.read_text(encoding="utf-8"), str(path), "exec")
+        for folder in ["src", "scripts", "task1/code", "task2/code", "task3/code"]:
+            for path in (utils.ROOT/folder).glob("*.py"):
+                compile(path.read_text(encoding="utf-8"), str(path), "exec")
         assert not torch.cuda.is_initialized()
         utils.save_json(utils.ROOT/"run/safety/python_guard_checks.json", {
             "platform": sys.platform, "executable": sys.executable,

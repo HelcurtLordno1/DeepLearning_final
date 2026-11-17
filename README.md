@@ -58,6 +58,8 @@ lessons_slides/       Bài giảng riêng, chỉ giữ local
 
 Không còn `.py`, `.ps1` hoặc `.txt` rải ở root. `.venv`, `__pycache__` và `__init__.py` được ẩn trong Explorer của VS Code; đường dẫn môi trường và kernel giữ nguyên. Code/artifact trước khi chuyển có bản sao trong `run/layout_backup/`.
 
+Xem [scripts/README.md](scripts/README.md) để biết vai trò của các công cụ còn giữ. Các script một lần và công cụ cũ trùng chức năng đã được dọn; `src/` giữ hai helper mà notebook đang sử dụng.
+
 ## Windows PowerShell
 
 Mở PowerShell tại root. Máy hiện tại đã có `.venv`; trên máy mới, chạy `scripts/setup_environment.ps1` trước. Sau đó:
