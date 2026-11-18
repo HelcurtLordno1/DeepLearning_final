@@ -16,6 +16,9 @@ __pycache__/
 /lessons_slides/
 /task1/
 
+# Reports stay local and are not published to the repository.
+/report/
+
 # Local credentials and operating-system files.
 .env
 .env.*
