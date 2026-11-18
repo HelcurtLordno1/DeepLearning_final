@@ -24,6 +24,8 @@ Choose **Final Project (Windows .venv)** and Run All. `TRAIN=False` displays sav
 
 Task 2 retains its original simple model and training code. Two short analysis cells illustrate the 48-hour input/five-target window and persistence errors on training data. EDA motivates hypotheses; saved validation comparisons provide the evidence for selecting the model. A 48-hour lookback is a design choice, not a demonstrated optimum over unrun alternatives.
 
+Both notebooks and the English report include architecture drawings with layer shapes and attention/residual connections. Short figure explanations identify the plotted data and explain what each view supports.
+
 **On a fresh clone:** notebook outputs and reports can be viewed immediately. Running all cells also requires raw data and the local checkpoints/result tables under `run/`. The repository excludes `.venv`, raw images, processed caches and full experiment directories. Downloading data alone does not restore checkpoint-viewing mode.
 
 ## Reports

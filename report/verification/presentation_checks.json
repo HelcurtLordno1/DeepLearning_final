@@ -1,9 +1,9 @@
 [
   {
     "task": "task2",
-    "code_cells": 18,
-    "markdown_cells": 23,
-    "inline_figures": 6,
+    "code_cells": 19,
+    "markdown_cells": 28,
+    "inline_figures": 7,
     "stderr_outputs": 0,
     "errors": 0,
     "python_in_markdown": false,
@@ -11,9 +11,9 @@
   },
   {
     "task": "task3",
-    "code_cells": 18,
-    "markdown_cells": 24,
-    "inline_figures": 4,
+    "code_cells": 19,
+    "markdown_cells": 25,
+    "inline_figures": 5,
     "stderr_outputs": 0,
     "errors": 0,
     "python_in_markdown": false,

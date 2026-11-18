@@ -107,6 +107,8 @@ def build(task):
             plt.tight_layout()
             plt.show()
         ''', 'eda_distribution')
+        if task=='task2':
+            md('**Read the two plots above:** the left line follows training OT through calendar time; the right histogram counts hourly readings in each OT interval. The changing level and spread explain why a forecast needs recent history. A histogram describes values, not forecast accuracy.')
         code('''
             correlations = train_data.drop(columns="date").corr()["OT"].drop("OT")
             lags = [1, 2, 5, 24, 48, 72]
@@ -121,6 +123,8 @@ def build(task):
             plt.show()
             display(pd.DataFrame({"Lag (giờ)": lags, "Autocorrelation": autocorrelation}).round(3))
         ''', 'eda_lags')
+        if task=='task2':
+            md('**Read the plots above:** the left bars are same-hour Pearson correlations between each load variable and OT; longer bars indicate stronger linear association, not causation. The right bars compare OT with its own earlier values. High lag-1 autocorrelation explains why persistence is a strong baseline; lag-24 correlation alone does not prove daily seasonality.')
         if task == 'task2':
             md('### A concrete five-hour forecast\n\nThe last observed hour is t. All five targets occur after t. This example uses only training data; the model will learn to predict the orange points from the blue history.')
             code('''
@@ -135,6 +139,7 @@ def build(task):
                 plt.tight_layout()
                 plt.show()
             ''', 'eda_window')
+            md('The blue line contains the 48 observed values available to the model. The dotted line marks the last observed hour t. The five orange markers are the true values at t+1 to t+5; they are targets for learning, not predictions produced by this illustration.')
             md('### Why compare with persistence and learn a correction?\n\nFor each horizon, calculate future OT minus the last observed OT on training data. Larger corrections make a constant forecast harder. This motivates a residual hypothesis; validation measurements decide whether to retain it.')
             code('''
                 changes = pd.DataFrame({f"t+{h}": train_data.OT.shift(-h) - train_data.OT
@@ -149,6 +154,7 @@ def build(task):
                 plt.tight_layout()
                 plt.show()
             ''', 'eda_persistence')
+            md('Blue bars show persistence MAE; orange bars show RMSE, which gives more weight to large mistakes. Errors are in the original OT scale. The increase across horizons shows that repeating the last value becomes less accurate further ahead. These are training-only baseline errors; the model’s held-out test results appear later.')
         md('**Ý nghĩa cho mô hình:** OT gần đây là baseline mạnh, vì vậy cần so với persistence. Tự tương quan ở độ trễ dài có thể do cả xu hướng chậm; chưa đủ để kết luận có chu kỳ 24 giờ. Các hướng kiểm tra là input 24/48/72 giờ, OT đơn lẻ so với nhiều biến, và dự báo phần thay đổi (residual). Không coi các hướng chưa chạy là đã cải thiện điểm.')
         md('## 3. Chia dữ liệu và tạo cửa sổ\n\nChia 70% / 15% / 15% theo thời gian. Scaler chỉ fit train; mỗi cửa sổ nằm trọn trong một tập. Input có 48 giờ × 7 biến. `t` là timestamp cuối đã quan sát.')
         code('''
@@ -221,6 +227,12 @@ def build(task):
                 md('**Why these additions?**\n\n- The height projection preserves upper/lower character detail.\n- Seven local regions give the GRU an ordered spatial cue; column positions distinguish left from right.\n- The small residual branch adjusts CNN features while preserving the warm-start prediction at initialization.\n\nThe measured improvement combines architecture changes and extra training. It is not an isolated ablation of each component, and the final model has one fine-tuning seed.')
         else:
             md('**Luồng baseline:** `[B,3,64,192]` → CNN `[B,128,8,48]` → trung bình chiều cao → 48 cột `[B,48,128]` → GRU 7 bước → attention → Linear → logits `[B,7,67]`. Argmax ở mỗi vị trí tạo chuỗi.')
+    diagram_function='draw_task2_architecture' if task=='task2' else 'draw_task3_architecture'
+    code(f'from model_diagrams import {diagram_function}\n{diagram_function}()\nplt.show()', 'architecture_diagram')
+    if task=='task2':
+        md('**Read the architecture diagram:** the encoder sends its final hidden/cell states to initialize the decoder (dashed path), and its 48-step memory to attention (long side path). Five decoder states are concatenated with five attention contexts. The shared Linear layer predicts corrections; the separate last-OT input is added to every correction. Values inside the model are standardized; evaluation later restores the original OT scale.')
+    else:
+        md('**Read the architecture diagram:** follow the three blue CNN blocks down to the feature split. The identity path and the 0.1-scaled refinement branch meet at the addition symbol. Height projection and column positions form memory. Global and seven local features feed the GRU; the global feature also initializes its state. Attention reads memory, then its context is concatenated with the direct GRU states before the shared character classifier. All seven output positions are retained.')
     code(definition(model_source, model_name), 'model')
     if forecast:
         code(f'''

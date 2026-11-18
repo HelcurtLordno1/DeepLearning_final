@@ -215,16 +215,14 @@
   {
     "kind": "image",
     "file": "time_split.png",
-    "caption": "Chronological partitions. Holdout data is not used to fit normalization."
+    "caption": "Hourly OT across the chronological train, validation and test partitions.",
+    "explanation": "In Figure {fig:time_split.png}, the horizontal axis is calendar time and the vertical axis is OT. Blue is the earlier training period, orange is validation, and green is the final test period. Their different levels show why random shuffling would give an unrealistic forecasting evaluation; normalization is fitted on blue observations only."
   },
   {
     "kind": "image",
     "file": "etth1_eda.png",
-    "caption": "Training-only EDA: OT over time, histogram, load correlations, and autocorrelation."
-  },
-  {
-    "kind": "paragraph",
-    "text": "Training OT has a mean of 16.295, a standard deviation of 8.349, a minimum of -4.080, and a maximum of 46.007. Its lag-1 autocorrelation is 0.993 and lag-24 autocorrelation is 0.925. This strong continuity makes persistence an important baseline. Longer-lag autocorrelation can also reflect slow trends; the plot alone does not establish a 24-hour seasonal cycle. The experiments therefore also compare daily seasonal forecasts and assess residual learning and attention using validation."
+    "caption": "Training-only EDA: OT over time (upper left), OT histogram (upper right), load correlations (lower left), and OT autocorrelation (lower right).",
+    "explanation": "Read Figure {fig:etth1_eda.png} by panel. Upper left shows OT changing over the training months; upper right counts how many hourly observations fall in each OT interval. Most observations are near 10–20, with a thinner high-temperature tail. Lower left compares each load variable with same-hour OT using Pearson correlation: longer bars mean stronger linear association, not causation. Lower right compares OT with its own value 1, 2, 5, 24, 48 and 72 hours earlier. The high lag-1 value (0.993) shows strong continuity; lag 24 is 0.925 but does not by itself prove daily seasonality. Training mean/SD are 16.295/8.349 and the range is −4.080 to 46.007. Together, these views motivate a persistence baseline and validation-based tests of learned corrections."
   },
   {
     "kind": "heading",
@@ -246,23 +244,31 @@
   },
   {
     "kind": "paragraph",
-    "text": "The following views were added to explain the saved experiment. They use training data only and do not constitute a new selection experiment. Strong persistence motivates testing small corrections; validation determines whether residual forecasting helps. The 48-hour input remains a design choice: no completed 24/72-hour comparison establishes its optimality."
+    "text": "The next two figures answer different questions: what information a five-hour forecast receives, and how much error a constant forecast makes. Both use training data only. They explain the saved experiment; the 48-hour lookback remains a design choice because no completed 24/72-hour comparison established its optimality."
   },
   {
     "kind": "image",
     "file": "task2_eda_window.png",
-    "caption": "A training example: 48 observed hours followed by five future targets. The vertical line identifies the last observed timestamp."
+    "caption": "One training window with 48 observed hours and five subsequent target hours.",
+    "explanation": "Read Figure {fig:task2_eda_window.png} at the dotted line: everything to its left is available input. The five orange markers to its right are the true future targets, not model predictions. Their order matches the five decoder outputs t+1 through t+5. Only OT is plotted; the actual model input also contains the six load variables."
   },
   {
     "kind": "image",
     "file": "task2_eda_persistence.png",
-    "caption": "Persistence errors on training data over horizons one to five. All five errors use a common set of valid training origins."
+    "caption": "Training-only persistence MAE and RMSE by forecast horizon.",
+    "explanation": "In Figure {fig:task2_eda_persistence.png}, persistence repeats the last observed OT. Blue bars show average absolute error; orange bars show RMSE, which penalizes larger errors more strongly. Rising bars indicate that holding OT constant becomes less accurate over longer horizons. These are training-data baseline errors, not the proposed model’s test errors."
   },
   {
     "kind": "heading",
     "level": 3,
     "text": "2.2. Model Architecture and Design",
     "newpage": false
+  },
+  {
+    "kind": "image",
+    "file": "task2_architecture.png",
+    "caption": "LSTM Encoder–Decoder with attention and residual forecasting.",
+    "explanation": "In Figure {fig:task2_architecture.png}, the encoder sends its final hidden/cell states to initialize the decoder, while its 48-step memory goes to attention. The decoder processes five repeated context inputs; attention produces one context for each output step. Concatenation combines both feature sources. A shared Linear layer predicts five corrections, and the last observed standardized OT is added to each correction. Inverse scaling is performed afterwards for evaluation."
   },
   {
     "kind": "table",
@@ -355,7 +361,8 @@
   {
     "kind": "image",
     "file": "task2_learning.png",
-    "caption": "Task 2 learning curves, seed 42; the dashed line marks the selected checkpoint."
+    "caption": "Training loss and validation error for the selected Task 2 configuration, seed 42.",
+    "explanation": "Figure {fig:task2_learning.png} separates scaled training MSE (left) from original-scale validation RMSE (right). The dashed line marks the validation-selected checkpoint. Training loss continues to decrease while validation fluctuates, so the final training epoch is not automatically the best model."
   },
   {
     "kind": "table",
@@ -512,16 +519,14 @@
   {
     "kind": "image",
     "file": "task2_horizons.png",
-    "caption": "Error increases with forecast horizon; all models use the same test partition."
-  },
-  {
-    "kind": "paragraph",
-    "text": "Macro RMSE is 0.982309, a 13.55% reduction relative to persistence. RMSE is approximately 0.6472 at t+1 and rises to approximately 1.2581 at t+5. Longer-range predictions have less information and are less able to follow abrupt changes. Mean pooled RMSE is approximately 1.0059, which differs from macro RMSE because the square root is taken after or before aggregation. All five horizons are reported so that a single aggregate does not conceal errors at the furthest step."
+    "caption": "Error increases with forecast horizon; all models use the same test partition.",
+    "explanation": "Figure {fig:task2_horizons.png} compares mean test RMSE across three seeds at each horizon; lower curves are better. Model macro RMSE is 0.982309, 13.55% below persistence. Its RMSE rises from about 0.6472 at t+1 to 1.2581 at t+5, showing greater difficulty further ahead. Mean pooled RMSE is about 1.0059; it differs because pooled scoring takes the square root after combining errors, whereas macro RMSE averages five separate RMSE values."
   },
   {
     "kind": "image",
     "file": "task2_predictions.png",
-    "caption": "Forecasts at t+1, t+3, and t+5 for the first 240 target timestamps, seed 42."
+    "caption": "Actual OT, model forecasts and persistence for a fixed test segment at three horizons.",
+    "explanation": "In Figure {fig:task2_predictions.png}, each subplot uses the first 240 test targets at the named horizon, seed 42. Follow the three lines around peaks and sudden changes: the longer-horizon forecast is less able to follow rapid variation. This is a qualitative illustration, not a separate performance estimate."
   },
   {
     "kind": "heading",
@@ -574,20 +579,6 @@
     "text": "The audit checked downloaded-image CRC32 values, full JPEG decoding, crop bounds, and image hashes; no byte-identical duplicates were found. Every character occurring in the holdouts also occurs in training. Grouping by plate text prevents the same plate identity from appearing in different partitions, but does not prove complete separation by camera or physical vehicle. Province characters are highly imbalanced, so high character accuracy can coexist with substantial errors at other positions."
   },
   {
-    "kind": "image",
-    "file": "plate_train_examples.png",
-    "caption": "First six training crops in fixed order, retaining the province character."
-  },
-  {
-    "kind": "image",
-    "file": "plate_train_eda.png",
-    "caption": "CCPD training EDA: crop aspect ratios and frequent characters in the final five positions."
-  },
-  {
-    "kind": "paragraph",
-    "text": "Training bounding boxes have a median width-to-height ratio of 2.77. The most frequent province character accounts for 95.87% of training images. Varying aspect ratios can distort character shapes when all crops are resized to one resolution. Province imbalance also motivates reporting full-plate accuracy alongside character accuracy. This EDA describes training data only; it is not used to select test images or modify the holdouts."
-  },
-  {
     "kind": "heading",
     "level": 3,
     "text": "3.2. Problem Description",
@@ -602,6 +593,18 @@
     "text": "The workflow is: read the manifest and filename labels → crop bounding boxes → read the uint8 cache in batches → apply the CNN encoder → run seven GRU decoder steps with attention → decode → select a checkpoint using validation → lock configuration and weight hashes → evaluate all 7,482 test images. Blurred images are not removed and holdout labels are not altered to improve scores. Fixed length seven avoids the need for PAD/SOS/EOS tokens, beam search, or CTC in the current model."
   },
   {
+    "kind": "image",
+    "file": "plate_train_examples.png",
+    "caption": "The first six training crops with their complete seven-character labels.",
+    "explanation": "Figure {fig:plate_train_examples.png} shows the actual resized inputs. Read each label from left to right, including the province symbol. Differences in blur and contrast illustrate recognition difficulty even when the annotation already provides the plate location."
+  },
+  {
+    "kind": "image",
+    "file": "plate_train_eda.png",
+    "caption": "CCPD training EDA: crop aspect ratios and frequent characters in the final five positions.",
+    "explanation": "Figure {fig:plate_train_eda.png} describes training images, not prediction errors. The left histogram counts crop boxes at each width/height ratio (median 2.77); changing ratios can distort strokes when resized to one fixed shape. The right bars count the most frequent characters in positions 3–7, revealing label imbalance. Separately, the most frequent province character accounts for 95.87% of training images; that statistic is not plotted in the right panel. This imbalance is another reason to report complete-plate accuracy alongside character accuracy."
+  },
+  {
     "kind": "heading",
     "level": 3,
     "text": "3.3. Model Architecture and Design",
@@ -610,7 +613,9 @@
   {
     "kind": "image",
     "file": "task3_architecture.png",
-    "caption": "Spatial CNN–GRU recognition pipeline. Seven regional inputs guide the recurrent decoder; attention reads 48 visual columns."
+    "caption": "Spatial CNN–GRU architecture of the final plate recognizer.",
+    "explanation": "Follow Figure {fig:task3_architecture.png} from top to bottom. The side CNN branch is scaled by 0.1 and added to the unchanged feature path. Global and local features are mixed to create seven GRU inputs; the global feature also initializes its hidden state. The long memory connection supplies attention keys/values, while decoder states take a direct path to concatenation before character classification.",
+    "width": 5.5
   },
   {
     "kind": "table",
@@ -664,7 +669,8 @@
         "Linear 256→67",
         "[B,7,67]"
       ]
-    ]
+    ],
+    "keep_together": true
   },
   {
     "kind": "paragraph",
@@ -727,7 +733,8 @@
   {
     "kind": "image",
     "file": "task3_learning_curves.png",
-    "caption": "Training and validation during refined fine-tuning. Earlier warm-start stages have separate histories."
+    "caption": "Training/validation cross-entropy and validation full-plate accuracy during refined fine-tuning.",
+    "explanation": "Figure {fig:task3_learning_curves.png} uses refined-run epochs only. The left panel tracks cross-entropy; the right tracks the fraction of entirely correct plates. Checkpoint selection uses full-plate validation accuracy, with CER breaking ties, rather than training loss."
   },
   {
     "kind": "heading",
@@ -776,16 +783,14 @@
   {
     "kind": "image",
     "file": "task3_benchmark_and_validation.png",
-    "caption": "Test benchmark and checkpoint selection based only on validation."
-  },
-  {
-    "kind": "paragraph",
-    "text": "The final model correctly recognizes 7,132 of 7,482 complete plates; 350 images contain at least one character error. Full-plate accuracy rises from 62.764% to 95.322%, an improvement of 32.56 percentage points. Character accuracy is 99.148% and CER is 0.846%. Validation accuracy of 95.438% and test accuracy of 95.322% are close within this cohort, but one holdout and one seed do not establish universal recognition accuracy."
+    "caption": "Test benchmark and checkpoint selection based only on validation.",
+    "explanation": "Read Figure {fig:task3_benchmark_and_validation.png} as two different evaluations: the left bars compare locked checkpoints on the same test images, while the right curve shows validation-based checkpoint selection during refined training. The final model reads 7,132/7,482 plates correctly, leaving 350 with at least one error. Full-plate accuracy increases from 62.764% to 95.322% (+32.56 percentage points); character accuracy is 99.148% and CER is 0.846%. Validation accuracy (95.438%) is close to test accuracy, but one holdout and one seed do not establish universal performance."
   },
   {
     "kind": "image",
     "file": "task3_test_examples.png",
-    "caption": "First six correct and first six incorrect plates in test order; examples are not manually chosen for appearance."
+    "caption": "Correct and incorrect predictions from a fixed ordering of the test set.",
+    "explanation": "In Figure {fig:task3_test_examples.png}, each title reads true label → prediction. The first six examples are correct and the next six contain errors. Compare individual symbols to see how one mistaken character makes the whole plate incorrect."
   },
   {
     "kind": "table",
@@ -828,15 +833,16 @@
   {
     "kind": "image",
     "file": "task3_test_attention.png",
-    "caption": "Attention over 48 visual columns for a test example; interpret it together with the image and prediction."
+    "caption": "Attention weights for seven decoder positions over 48 visual columns.",
+    "explanation": "In Figure {fig:task3_test_attention.png}, each row is one output character and the 48 columns are visual locations from left to right. Brighter cells carry more attention within that row. These are feature weights, rather than a pixel mask or a measure of recognition confidence."
   },
   {
     "kind": "paragraph",
-    "text": "Remaining mistakes include blurred strokes, glare, tilt, and visually similar letters or digits. These are qualitative observations from the displayed examples, rather than a labeled frequency analysis of every error. Further work could assess mild augmentation, rectification, or more varied data under a new validation protocol. The already inspected test set must not be used to reselect the current model."
+    "text": "The errors in Figure {fig:task3_test_examples.png} illustrate blurred strokes, glare, tilt and similar-looking symbols. These observations describe the displayed examples; they are not measured frequencies of error causes. Further improvements require validation-based study with an appropriate holdout protocol."
   },
   {
     "kind": "paragraph",
-    "text": "To address the assignment's four-metric presentation, the report also provides R²/NSE/MAE/RMSE on flattened decoded binary one-hot arrays. These are auxiliary classification diagnostics, not regression on arbitrary character IDs, and they do not replace full-plate accuracy. With many classes, a small one-hot MAE does not imply that nearly every plate is correct."
+    "text": "The assignment's R²/NSE/MAE/RMSE are also reported on flattened binary one-hot arrays. These auxiliary classification diagnostics supplement full-plate accuracy; their small MAE partly reflects the many zero entries and should not be interpreted as near-perfect recognition."
   },
   {
     "kind": "table",
