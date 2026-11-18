@@ -1,11 +1,6 @@
 {
   "checked": [
     {
-      "task": "task1",
-      "checked_test_runs": 9,
-      "passed": true
-    },
-    {
       "task": "task2",
       "checked_test_runs": 9,
       "passed": true
@@ -16,13 +11,17 @@
       "passed": true
     }
   ],
-  "all_three_tasks_finished": true,
+  "all_active_tasks_finished": true,
+  "active_tasks": [
+    "task2",
+    "task3"
+  ],
   "task3_frozen_checkpoint_hashes_match": true,
   "task3_completed_fine_tuning_seeds": [
     42
   ],
   "notebooks": {
-    "fresh_windows_kernels": 3,
+    "fresh_windows_kernels": 2,
     "executed_without_errors": true,
     "paired_model_attention_training_step_match": true
   }

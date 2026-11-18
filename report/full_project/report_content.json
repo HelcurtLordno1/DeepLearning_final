@@ -1,0 +1,1050 @@
+[
+  {
+    "kind": "heading",
+    "level": 1,
+    "text": "Executive Summary",
+    "newpage": false
+  },
+  {
+    "kind": "paragraph",
+    "text": "This report presents the two tasks in the updated final-project scope: Task 2, five-hour transformer oil temperature forecasting, and Task 3, seven-character license plate recognition. Task numbers follow the original assignment. Group 6 uses ETTh1 for forecasting and a fixed 50,000-image CCPD-Base cohort for recognition. The objectives are explainable models, validation-based selection, independent testing, and traceable improvements over appropriate baselines."
+  },
+  {
+    "kind": "paragraph",
+    "text": "Task 2 achieves test macro RMSE 0.982309 ± 0.017116 over three seeds, 13.55% lower than persistence, with macro R²/NSE 0.874910. Task 3 achieves 95.322% full-plate accuracy, 99.148% character accuracy, and CER 0.846% on 7,482 images using one fine-tuning seed. These are different metrics: forecasting R² is not classification accuracy. All reported models were selected on validation before testing."
+  },
+  {
+    "kind": "heading",
+    "level": 1,
+    "text": "Part 1: Theoretical Background",
+    "newpage": true
+  },
+  {
+    "kind": "heading",
+    "level": 2,
+    "text": "Recurrent Neural Networks, LSTM and GRU",
+    "newpage": false
+  },
+  {
+    "kind": "paragraph",
+    "text": "A recurrent neural network processes a sequence in order: its current hidden state depends on the current input and the preceding state. This structure suits hourly observations and character sequences. A basic RNN can struggle to propagate gradients over many steps. LSTM introduces a cell state and input, forget, and output gates to control retained information. GRU uses update and reset gates with a more compact structure. In this project, LSTM is used for forecasting, while GRU produces the seven decoder states for plate recognition."
+  },
+  {
+    "kind": "paragraph",
+    "text": "hₜ = tanh(Wₓxₜ + Wₕhₜ₋₁ + b)"
+  },
+  {
+    "kind": "paragraph",
+    "text": "The equation illustrates a basic RNN; LSTM and GRU replace this update with learned gating mechanisms. The hidden size H=128 is the dimensionality of the state, rather than the number of time steps. For batch size B and 48 input hours, the LSTM encoder produces a memory tensor of shape [B,48,128]. Data splitting and training-only normalization are required to prevent future information from entering model training."
+  },
+  {
+    "kind": "heading",
+    "level": 2,
+    "text": "Encoder–Decoder architecture",
+    "newpage": false
+  },
+  {
+    "kind": "paragraph",
+    "text": "An encoder converts an input sequence into memory features and final states. A separate recurrent decoder generates the output sequence from the context and encoder states. Task 2 uses an actual LSTM encoder and LSTM decoder: the context is repeated five times, and a shared Linear layer is applied at each output step. Task 3 replaces the sequence encoder with a CNN and uses a GRU decoder for seven classification outputs. Ground-truth future outputs are not supplied to the decoder during validation or testing."
+  },
+  {
+    "kind": "heading",
+    "level": 2,
+    "text": "Dot-product Attention",
+    "newpage": false
+  },
+  {
+    "kind": "paragraph",
+    "text": "A fixed context can discard useful information. Attention compares each query qⱼ with memory positions mᵢ, normalizes the scores using softmax, and forms a weighted sum. Memory positions represent hours in forecasting and 48 visual columns in OCR. The project uses single-head scaled dot-product attention, without a large Transformer or MultiHeadAttention module."
+  },
+  {
+    "kind": "paragraph",
+    "text": "aⱼᵢ = softmaxᵢ(qⱼᵀmᵢ / √H);    cⱼ = Σᵢ aⱼᵢmᵢ"
+  },
+  {
+    "kind": "paragraph",
+    "text": "Decoder features are concatenated with the attention context before prediction. Attention maps help inspect the model's weights; a bright region alone does not prove that a prediction is correct or establish a causal explanation."
+  },
+  {
+    "kind": "heading",
+    "level": 2,
+    "text": "CNN, residual learning and spatial information",
+    "newpage": false
+  },
+  {
+    "kind": "paragraph",
+    "text": "Convolution learns local visual features, ReLU introduces nonlinearity, and pooling reduces spatial resolution. In Task 3, three CNN blocks transform RGB images [B,3,64,192] into [B,128,8,48]. Simply averaging over height can discard upper and lower character details. The improved model learns a height projection and provides seven left-to-right regions to the decoder. A small residual CNN branch and learned column-position vectors add representational capacity."
+  },
+  {
+    "kind": "paragraph",
+    "text": "Residual forecasting in Task 2 learns a correction relative to the last observed OT value instead of relearning the baseline level from scratch. The forecast is the persistence value plus a learned adjustment. This addition uses an already observed value, rather than the true future temperature."
+  },
+  {
+    "kind": "paragraph",
+    "text": "ŷₜ₊ₕ = yₜ + Δŷₜ₊ₕ"
+  },
+  {
+    "kind": "heading",
+    "level": 2,
+    "text": "Loss functions and evaluation metrics",
+    "newpage": false
+  },
+  {
+    "kind": "paragraph",
+    "text": "Forecasting minimizes MSE on standardized OT. Normalization is fitted only on training data, and predictions are inverse-transformed to the original OT scale before evaluation. OCR minimizes cross-entropy using logits and class labels: model output [B,7,67] is transposed to [B,67,7] for a target tensor [B,7]. Softmax is not applied before cross-entropy. Argmax is used only to decode predictions during evaluation."
+  },
+  {
+    "kind": "paragraph",
+    "text": "MAE = mean(|y − ŷ|);    RMSE = √mean((y − ŷ)²)"
+  },
+  {
+    "kind": "paragraph",
+    "text": "R² = NSE = 1 − Σ(y − ŷ)² / Σ(y − mean(y))²"
+  },
+  {
+    "kind": "paragraph",
+    "text": "Full-plate accuracy = number of exactly correct sequences / number of images"
+  },
+  {
+    "kind": "paragraph",
+    "text": "Character accuracy = number of correct character positions / total positions"
+  },
+  {
+    "kind": "paragraph",
+    "text": "CER = total Levenshtein edit distance / total ground-truth characters"
+  },
+  {
+    "kind": "paragraph",
+    "text": "Higher R²/NSE is better, while lower MAE/RMSE/CER is better. Under the same residual-based definition and the same nonconstant observations, R² and NSE are equal. In Task 2, macro scores average metrics calculated separately for the five horizons; pooled scores are calculated once after combining all predictions. The two RMSE aggregation methods are not equivalent. CER uses sequence edit distance and therefore need not equal one minus positional character accuracy."
+  },
+  {
+    "kind": "heading",
+    "level": 1,
+    "text": "Part 2: Practical Implementation",
+    "newpage": true
+  },
+  {
+    "kind": "heading",
+    "level": 2,
+    "text": "2. Task 2 — Forecasting Multiple Consecutive Future Time Points",
+    "newpage": false
+  },
+  {
+    "kind": "heading",
+    "level": 3,
+    "text": "2.1. Problem Description",
+    "newpage": false
+  },
+  {
+    "kind": "heading",
+    "level": 4,
+    "text": "2.1.1. Dataset Description and Training EDA"
+  },
+  {
+    "kind": "paragraph",
+    "text": "ETTh1 is part of the authors' Electricity Transformer Dataset [1]. ETTh1.csv contains 17,420 hourly observations from 1 July 2016 at 00:00 to 26 June 2018 at 19:00, consisting of a timestamp, six electrical load variables, and the target OT (oil temperature). The checked local data contains no missing values, duplicate timestamps, or gaps in hourly spacing. OT represents transformer oil temperature, rather than air temperature."
+  },
+  {
+    "kind": "paragraph",
+    "text": "Download CSV: https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTh1.csv"
+  },
+  {
+    "kind": "table",
+    "caption": "ETTh1 attributes according to the authors' documentation [1].",
+    "headers": [
+      "Attribute",
+      "Description"
+    ],
+    "rows": [
+      [
+        "date",
+        "Hourly timestamp"
+      ],
+      [
+        "HUFL / HULL",
+        "High useful / useless load"
+      ],
+      [
+        "MUFL / MULL",
+        "Middle useful / useless load"
+      ],
+      [
+        "LUFL / LULL",
+        "Low useful / useless load"
+      ],
+      [
+        "OT",
+        "Oil temperature  target pred_column"
+      ]
+    ]
+  },
+  {
+    "kind": "table",
+    "caption": "Chronological 70%/15%/15% split; each window is entirely within its partition.",
+    "headers": [
+      "Partition",
+      "Raw rows",
+      "Start",
+      "End",
+      "Task 2 windows"
+    ],
+    "rows": [
+      [
+        "Train",
+        "12194",
+        "2016-07-01 00:00",
+        "2017-11-21 01:00",
+        "12142"
+      ],
+      [
+        "Validation",
+        "2613",
+        "2017-11-21 02:00",
+        "2018-03-09 22:00",
+        "2561"
+      ],
+      [
+        "Test",
+        "2613",
+        "2018-03-09 23:00",
+        "2018-06-26 19:00",
+        "2561"
+      ]
+    ]
+  },
+  {
+    "kind": "image",
+    "file": "time_split.png",
+    "caption": "Chronological partitions. Holdout data is not used to fit normalization."
+  },
+  {
+    "kind": "image",
+    "file": "etth1_eda.png",
+    "caption": "Training-only EDA: OT over time, histogram, load correlations, and autocorrelation."
+  },
+  {
+    "kind": "paragraph",
+    "text": "Training OT has a mean of 16.295, a standard deviation of 8.349, a minimum of -4.080, and a maximum of 46.007. Its lag-1 autocorrelation is 0.993 and lag-24 autocorrelation is 0.925. This strong continuity makes persistence an important baseline. Longer-lag autocorrelation can also reflect slow trends; the plot alone does not establish a 24-hour seasonal cycle. The experiments therefore also compare daily seasonal forecasts and assess residual learning and attention using validation."
+  },
+  {
+    "kind": "heading",
+    "level": 4,
+    "text": "2.1.2. Forecasting Objective and Protocol"
+  },
+  {
+    "kind": "paragraph",
+    "text": "Title: Multi-Step Transformer Oil Temperature Forecasting. Research objectives: predict five consecutive future hours and quantify deterioration with forecast horizon. The dataset is ETTh1, the target is OT, and the input is [B,48,7]. Output [B,5] represents t+1 through t+5; t always denotes the last observed timestamp. Scalers are fitted only on training data, and all input and target values of a window remain within one partition."
+  },
+  {
+    "kind": "paragraph",
+    "text": "There are 12,142 training, 2,561 validation, and 2,561 test windows. Each window has five targets in its own partition. The model uses a real LSTM encoder and recurrent decoder. If the input ends at 23:00, the targets are 00:00–04:00 the next day. Persistence repeats the last observed OT value at every horizon; daily seasonal forecasting uses the corresponding observed hour from the previous day. The selected configuration is repeated using seeds 42, 123, and 2026."
+  },
+  {
+    "kind": "heading",
+    "level": 4,
+    "text": "2.1.3. Training-Only Forecasting Evidence"
+  },
+  {
+    "kind": "paragraph",
+    "text": "The following views were added to explain the saved experiment. They use training data only and do not constitute a new selection experiment. Strong persistence motivates testing small corrections; validation determines whether residual forecasting helps. The 48-hour input remains a design choice: no completed 24/72-hour comparison establishes its optimality."
+  },
+  {
+    "kind": "image",
+    "file": "task2_eda_window.png",
+    "caption": "A training example: 48 observed hours followed by five future targets. The vertical line identifies the last observed timestamp."
+  },
+  {
+    "kind": "image",
+    "file": "task2_eda_persistence.png",
+    "caption": "Persistence errors on training data over horizons one to five. All five errors use a common set of valid training origins."
+  },
+  {
+    "kind": "heading",
+    "level": 3,
+    "text": "2.2. Model Architecture and Design",
+    "newpage": false
+  },
+  {
+    "kind": "table",
+    "caption": "Task 2 Encoder–Decoder, without ground-truth future inputs.",
+    "headers": [
+      "Stage",
+      "Shape / operation"
+    ],
+    "rows": [
+      [
+        "LSTM encoder, H=128",
+        "Input [B,48,7] → memory [B,48,128]"
+      ],
+      [
+        "Encoder state/context",
+        "Initialize decoder hidden and cell states"
+      ],
+      [
+        "Repeat context + LSTM decoder",
+        "5 steps → [B,5,128]"
+      ],
+      [
+        "Dot cross-attention",
+        "Each step attends to 48 encoder states"
+      ],
+      [
+        "Concat + shared Linear",
+        "[B,5,256] → [B,5,1]"
+      ],
+      [
+        "Residual + squeeze",
+        "Add last observed OT → [B,5]"
+      ]
+    ]
+  },
+  {
+    "kind": "paragraph",
+    "text": "The final seq128_attention_residual configuration uses Adam with learning rate 0.001, hidden size 128, dropout 0, batch size 64, a maximum of 60 epochs, patience 8, and gradient clipping at norm 1.0. The loss is the mean MSE over five standardized outputs. The decoder learns output positions from the encoder context and states; teacher forcing with true future labels is not used during evaluation."
+  },
+  {
+    "kind": "table",
+    "caption": "Task 2 validation comparison at seed 42.",
+    "headers": [
+      "Configuration",
+      "Validation RMSE",
+      "Selected"
+    ],
+    "rows": [
+      [
+        "seq64",
+        "1.009376",
+        ""
+      ],
+      [
+        "seq64_attention",
+        "0.988018",
+        ""
+      ],
+      [
+        "seq64_residual",
+        "0.940312",
+        ""
+      ],
+      [
+        "seq64_attention_residual",
+        "0.945092",
+        ""
+      ],
+      [
+        "seq128_attention_residual",
+        "0.902874",
+        "Yes"
+      ],
+      [
+        "seq64_attention_residual_lr3e4",
+        "0.931735",
+        ""
+      ],
+      [
+        "seq64_attention_residual_OT",
+        "0.918362",
+        ""
+      ]
+    ]
+  },
+  {
+    "kind": "paragraph",
+    "text": "Attention does not automatically guarantee an improvement: hidden size and residual forecasting also affect the results, as the configuration table shows. This comparison supports configuration selection on validation; it is not evidence that each individual component produces the same independent gain."
+  },
+  {
+    "kind": "image",
+    "file": "task2_learning.png",
+    "caption": "Task 2 learning curves, seed 42; the dashed line marks the selected checkpoint."
+  },
+  {
+    "kind": "table",
+    "caption": "Evidence supporting the Task 2 configuration; EDA motivates hypotheses and validation measures the benefit.",
+    "headers": [
+      "Evidence",
+      "Decision and limitation"
+    ],
+    "rows": [
+      [
+        "Ordered hourly data and strong continuity",
+        "Use an LSTM and compare with persistence."
+      ],
+      [
+        "Five future values are required",
+        "Use an actual recurrent five-step decoder."
+      ],
+      [
+        "Training targets differ from the last observed OT",
+        "Test residual corrections, then judge validation RMSE."
+      ],
+      [
+        "Attention does not help every configuration",
+        "seq64_attention_residual is worse than seq64_residual on validation."
+      ],
+      [
+        "The H=128 attention/residual model has the best recorded validation RMSE",
+        "Freeze that configuration; evaluate all three seeds on test."
+      ]
+    ]
+  },
+  {
+    "kind": "heading",
+    "level": 3,
+    "text": "2.3. Experimental Results",
+    "newpage": false
+  },
+  {
+    "kind": "table",
+    "caption": "Primary Task 2 benchmark: equally weighted macro averages over five horizons, three seeds.",
+    "headers": [
+      "Model",
+      "R²",
+      "NSE",
+      "MAE",
+      "RMSE"
+    ],
+    "rows": [
+      [
+        "Persistence",
+        "0.828667",
+        "0.828667",
+        "0.806323",
+        "1.136276"
+      ],
+      [
+        "Daily seasonal",
+        "0.357368",
+        "0.357368",
+        "1.706654",
+        "2.280155"
+      ],
+      [
+        "Final model (mean ± SD, 3 seeds)",
+        "0.874910 ± 0.003751",
+        "0.874910 ± 0.003751",
+        "0.686927 ± 0.023029",
+        "0.982309 ± 0.017116"
+      ]
+    ]
+  },
+  {
+    "kind": "table",
+    "caption": "Seed-level macro and pooled results are reported separately.",
+    "headers": [
+      "Seed",
+      "Macro R²/NSE",
+      "Macro MAE",
+      "Macro RMSE",
+      "Pooled RMSE"
+    ],
+    "rows": [
+      [
+        "42",
+        "0.878945",
+        "0.664154",
+        "0.964861",
+        "0.989634"
+      ],
+      [
+        "123",
+        "0.874257",
+        "0.686425",
+        "0.982993",
+        "1.008616"
+      ],
+      [
+        "2026",
+        "0.871529",
+        "0.710203",
+        "0.999073",
+        "1.019496"
+      ]
+    ]
+  },
+  {
+    "kind": "table",
+    "caption": "Mean test metrics by horizon across three seeds; each horizon has 2,561 evaluation pairs.",
+    "headers": [
+      "Horizon",
+      "R²",
+      "NSE",
+      "MAE",
+      "RMSE"
+    ],
+    "rows": [
+      [
+        "t+1",
+        "0.948145",
+        "0.948145",
+        "0.451514",
+        "0.647163"
+      ],
+      [
+        "t+2",
+        "0.911002",
+        "0.911002",
+        "0.577557",
+        "0.848342"
+      ],
+      [
+        "t+3",
+        "0.873390",
+        "0.873390",
+        "0.697853",
+        "1.012006"
+      ],
+      [
+        "t+4",
+        "0.837670",
+        "0.837670",
+        "0.807903",
+        "1.145966"
+      ],
+      [
+        "t+5",
+        "0.804343",
+        "0.804343",
+        "0.899811",
+        "1.258068"
+      ]
+    ]
+  },
+  {
+    "kind": "image",
+    "file": "task2_horizons.png",
+    "caption": "Error increases with forecast horizon; all models use the same test partition."
+  },
+  {
+    "kind": "paragraph",
+    "text": "Macro RMSE is 0.982309, a 13.55% reduction relative to persistence. RMSE is approximately 0.6472 at t+1 and rises to approximately 1.2581 at t+5. Longer-range predictions have less information and are less able to follow abrupt changes. Mean pooled RMSE is approximately 1.0059, which differs from macro RMSE because the square root is taken after or before aggregation. All five horizons are reported so that a single aggregate does not conceal errors at the furthest step."
+  },
+  {
+    "kind": "image",
+    "file": "task2_predictions.png",
+    "caption": "Forecasts at t+1, t+3, and t+5 for the first 240 target timestamps, seed 42."
+  },
+  {
+    "kind": "heading",
+    "level": 2,
+    "text": "3. Task 3 — Image-to-Sequence Prediction",
+    "newpage": true
+  },
+  {
+    "kind": "heading",
+    "level": 3,
+    "text": "3.1. Dataset Description",
+    "newpage": false
+  },
+  {
+    "kind": "paragraph",
+    "text": "CCPD (Chinese City Parking Dataset) provides vehicle images with license plate annotations embedded in filenames [2]. This project uses exactly 50,000 selected CCPD-Base images from a CCPD2019 mirror. This is a coursework cohort, rather than the official challenge protocol. Official source: https://github.com/detectRecog/CCPD . Pinned mirror: https://huggingface.co/datasets/okita-souji/ccpd2019train/tree/230a8d1092b7c8b0113541efe9861527275b5c04 ; archive: train.zip."
+  },
+  {
+    "kind": "paragraph",
+    "text": "The download selection consists of 500 blocks of 100 consecutive JPEG entries, sampled with random seed 42 from the mirror's 100,000-image pool. Selection preceded training and did not depend on model scores. Original JPEG dimensions are width × height = 720 × 1160 pixels; the 50,000 original images occupy approximately 3.43 GiB. Filenames encode character indices, a bounding box, and four corners. Each seven-position label contains a province character, one letter, and five letters/digits. The fixed vocabulary contains 67 classes. The source's O sentinel denotes no character and is not the digit zero."
+  },
+  {
+    "kind": "table",
+    "caption": "CCPD partitions grouped by complete plate text; plate identities do not overlap.",
+    "headers": [
+      "Partition",
+      "Images",
+      "Distinct plate strings"
+    ],
+    "rows": [
+      [
+        "train",
+        "35043",
+        "31481"
+      ],
+      [
+        "validation",
+        "7475",
+        "6746"
+      ],
+      [
+        "test",
+        "7482",
+        "6747"
+      ]
+    ]
+  },
+  {
+    "kind": "paragraph",
+    "text": "The audit checked downloaded-image CRC32 values, full JPEG decoding, crop bounds, and image hashes; no byte-identical duplicates were found. Every character occurring in the holdouts also occurs in training. Grouping by plate text prevents the same plate identity from appearing in different partitions, but does not prove complete separation by camera or physical vehicle. Province characters are highly imbalanced, so high character accuracy can coexist with substantial errors at other positions."
+  },
+  {
+    "kind": "image",
+    "file": "plate_train_examples.png",
+    "caption": "First six training crops in fixed order, retaining the province character."
+  },
+  {
+    "kind": "image",
+    "file": "plate_train_eda.png",
+    "caption": "CCPD training EDA: crop aspect ratios and frequent characters in the final five positions."
+  },
+  {
+    "kind": "paragraph",
+    "text": "Training bounding boxes have a median width-to-height ratio of 2.77. The most frequent province character accounts for 95.87% of training images. Varying aspect ratios can distort character shapes when all crops are resized to one resolution. Province imbalance also motivates reporting full-plate accuracy alongside character accuracy. This EDA describes training data only; it is not used to select test images or modify the holdouts."
+  },
+  {
+    "kind": "heading",
+    "level": 3,
+    "text": "3.2. Problem Description",
+    "newpage": false
+  },
+  {
+    "kind": "paragraph",
+    "text": "Title: Seven-Character License Plate Recognition. Research objectives: map a cropped plate image to its complete seven-character string and improve full-plate accuracy over the CNN–GRU attention baseline. Input: annotation-derived RGB crop resized to 192 × 64 pixels and divided by 255, represented by [B,3,64,192]. Output: logits [B,7,67], decoded using argmax and the saved vocabulary. The project evaluates recognition with a known plate location, rather than detection from a full vehicle image."
+  },
+  {
+    "kind": "paragraph",
+    "text": "The workflow is: read the manifest and filename labels → crop bounding boxes → read the uint8 cache in batches → apply the CNN encoder → run seven GRU decoder steps with attention → decode → select a checkpoint using validation → lock configuration and weight hashes → evaluate all 7,482 test images. Blurred images are not removed and holdout labels are not altered to improve scores. Fixed length seven avoids the need for PAD/SOS/EOS tokens, beam search, or CTC in the current model."
+  },
+  {
+    "kind": "heading",
+    "level": 3,
+    "text": "3.3. Model Architecture and Design",
+    "newpage": false
+  },
+  {
+    "kind": "image",
+    "file": "task3_architecture.png",
+    "caption": "Spatial CNN–GRU recognition pipeline. Seven regional inputs guide the recurrent decoder; attention reads 48 visual columns."
+  },
+  {
+    "kind": "table",
+    "caption": "Refined-model tensor flow; 642,051 parameters in total.",
+    "headers": [
+      "Layer / operation",
+      "Shape"
+    ],
+    "rows": [
+      [
+        "Input RGB",
+        "[B,3,64,192]"
+      ],
+      [
+        "Conv 3→32 + ReLU + Pool 2×2",
+        "[B,32,32,96]"
+      ],
+      [
+        "Conv 32→64 + ReLU + Pool 2×2",
+        "[B,64,16,48]"
+      ],
+      [
+        "Conv 64→128 + ReLU + Pool (2,1)",
+        "[B,128,8,48]"
+      ],
+      [
+        "Residual: Conv–ReLU–Conv, scale 0.1",
+        "[B,128,8,48]"
+      ],
+      [
+        "Height flatten + Linear 1024→128",
+        "[B,48,128]"
+      ],
+      [
+        "Learned positions for 48 columns",
+        "[1,48,128], broadcast across the batch"
+      ],
+      [
+        "AdaptiveAvgPool1d(7)",
+        "7 left-to-right regions [B,7,128]"
+      ],
+      [
+        "0.5 local + 0.5 global → GRU",
+        "[B,7,128]"
+      ],
+      [
+        "Attention + concatenate",
+        "[B,7,256]"
+      ],
+      [
+        "Linear 256→67",
+        "[B,7,67]"
+      ]
+    ]
+  },
+  {
+    "kind": "paragraph",
+    "text": "The baseline averages over feature height and repeats the same global context seven times. The aligned model preserves vertical detail through Linear(8×128,128) and supplies a local region to each decoder step. The refined model adds two 3×3 convolutions as a feature-correction branch scaled by 0.1, together with position vectors for 48 columns. The branch's last convolution and the position vectors are initialized to zero, preserving the aligned checkpoint's initial prediction function. The system remains a CNN encoder with a recurrent decoder and does not use an external OCR service."
+  },
+  {
+    "kind": "table",
+    "caption": "Recorded refined-run settings, including each parameter group's initial learning rate.",
+    "headers": [
+      "Setting",
+      "Value"
+    ],
+    "rows": [
+      [
+        "Seed / batch / loader workers",
+        "42 / 16 / 0"
+      ],
+      [
+        "CNN learning rate",
+        "0.00003"
+      ],
+      [
+        "Height projection learning rate",
+        "0.0003"
+      ],
+      [
+        "GRU + classifier / refinement lr",
+        "0.0001 / 0.0001"
+      ],
+      [
+        "Column-position learning rate",
+        "0.001"
+      ],
+      [
+        "Loss / optimizer",
+        "Cross-entropy / Adam"
+      ],
+      [
+        "Scheduler / clipping",
+        "ReduceLROnPlateau(validation CE), factor 0.5, patience 2 / norm 1.0"
+      ],
+      [
+        "Completed epochs / limit / patience",
+        "12 refined / 24 / 6"
+      ],
+      [
+        "Checkpoint selection",
+        "Validation full-plate accuracy; lower CER breaks ties"
+      ],
+      [
+        "Augmentation / crop",
+        "Disabled / annotation bounding box"
+      ]
+    ]
+  },
+  {
+    "kind": "paragraph",
+    "text": "The warm-start chain is attention baseline → aligned for four epochs → refined for twelve epochs. The baseline's best checkpoint is epoch 79 of 80 completed epochs; aligned selects epoch 4; refined selects epoch 12 after a learning-rate reduction at that epoch. Only one fine-tuning seed was completed, rather than three independent training runs from scratch. The comparison combines architecture changes with additional training; it is not an independent ablation of each component. Runtime is reported separately for each run, so fine-tuning time does not implicitly include pretraining costs."
+  },
+  {
+    "kind": "image",
+    "file": "task3_learning_curves.png",
+    "caption": "Training and validation during refined fine-tuning. Earlier warm-start stages have separate histories."
+  },
+  {
+    "kind": "heading",
+    "level": 3,
+    "text": "3.4. Experimental Results",
+    "newpage": false
+  },
+  {
+    "kind": "table",
+    "caption": "Three checkpoints locked before testing; the same 7,482 images and seed 42.",
+    "headers": [
+      "Model",
+      "Plate %",
+      "Char %",
+      "CER %",
+      "Params",
+      "Best epoch"
+    ],
+    "rows": [
+      [
+        "CNN–GRU attention",
+        "62.764",
+        "92.743",
+        "7.236",
+        "209539",
+        "79"
+      ],
+      [
+        "Aligned CNN–GRU",
+        "80.540",
+        "96.353",
+        "3.637",
+        "340739",
+        "4"
+      ],
+      [
+        "Refined spatial CNN–GRU",
+        "95.322",
+        "99.148",
+        "0.846",
+        "642051",
+        "12"
+      ]
+    ]
+  },
+  {
+    "kind": "image",
+    "file": "task3_benchmark_and_validation.png",
+    "caption": "Test benchmark and checkpoint selection based only on validation."
+  },
+  {
+    "kind": "paragraph",
+    "text": "The final model correctly recognizes 7,132 of 7,482 complete plates; 350 images contain at least one character error. Full-plate accuracy rises from 62.764% to 95.322%, an improvement of 32.56 percentage points. Character accuracy is 99.148% and CER is 0.846%. Validation accuracy of 95.438% and test accuracy of 95.322% are close within this cohort, but one holdout and one seed do not establish universal recognition accuracy."
+  },
+  {
+    "kind": "image",
+    "file": "task3_test_examples.png",
+    "caption": "First six correct and first six incorrect plates in test order; examples are not manually chosen for appearance."
+  },
+  {
+    "kind": "table",
+    "caption": "Test accuracy at each position of the seven-character sequence.",
+    "headers": [
+      "Character position",
+      "Test accuracy (%)"
+    ],
+    "rows": [
+      [
+        "1",
+        "98.917"
+      ],
+      [
+        "2",
+        "99.693"
+      ],
+      [
+        "3",
+        "99.118"
+      ],
+      [
+        "4",
+        "98.864"
+      ],
+      [
+        "5",
+        "99.051"
+      ],
+      [
+        "6",
+        "99.278"
+      ],
+      [
+        "7",
+        "99.118"
+      ]
+    ]
+  },
+  {
+    "kind": "image",
+    "file": "task3_test_attention.png",
+    "caption": "Attention over 48 visual columns for a test example; interpret it together with the image and prediction."
+  },
+  {
+    "kind": "paragraph",
+    "text": "Remaining mistakes include blurred strokes, glare, tilt, and visually similar letters or digits. These are qualitative observations from the displayed examples, rather than a labeled frequency analysis of every error. Further work could assess mild augmentation, rectification, or more varied data under a new validation protocol. The already inspected test set must not be used to reselect the current model."
+  },
+  {
+    "kind": "paragraph",
+    "text": "To address the assignment's four-metric presentation, the report also provides R²/NSE/MAE/RMSE on flattened decoded binary one-hot arrays. These are auxiliary classification diagnostics, not regression on arbitrary character IDs, and they do not replace full-plate accuracy. With many classes, a small one-hot MAE does not imply that nearly every plate is correct."
+  },
+  {
+    "kind": "table",
+    "caption": "Auxiliary one-hot metrics, separated from the primary OCR metrics.",
+    "headers": [
+      "Model",
+      "Auxiliary R²",
+      "Auxiliary NSE",
+      "Auxiliary MAE",
+      "Auxiliary RMSE"
+    ],
+    "rows": [
+      [
+        "CNN–GRU attention",
+        "0.852652",
+        "0.852652",
+        "0.002166",
+        "0.046545"
+      ],
+      [
+        "Aligned CNN–GRU",
+        "0.925958",
+        "0.925958",
+        "0.001089",
+        "0.032994"
+      ],
+      [
+        "Refined spatial CNN–GRU",
+        "0.982711",
+        "0.982711",
+        "0.000254",
+        "0.015944"
+      ]
+    ]
+  },
+  {
+    "kind": "heading",
+    "level": 1,
+    "text": "Part 3: Conclusion",
+    "newpage": true
+  },
+  {
+    "kind": "paragraph",
+    "text": "Group 6 completed the two required tasks with checked data, validation-based model selection, independent testing, and verifiable measurements. Task 2 reduces macro RMSE by 13.55% relative to persistence across three seeds. Task 3 reaches 95.322% full-plate accuracy on the declared CCPD cohort with one fine-tuning seed. These results meet the project objectives under the stated internal evaluation protocols."
+  },
+  {
+    "kind": "paragraph",
+    "text": "The main lessons are to align target timestamps correctly, fit scalers only on training data, compare against strong baselines, and preserve spatial information before decoding. Attention can select relevant states, while residual learning and input representations also matter. In OCR, character accuracy cannot substitute for complete-sequence accuracy. These results are internal evidence under the declared fixed splits, rather than a claim of state-of-the-art performance."
+  },
+  {
+    "kind": "paragraph",
+    "text": "Limitations include one time-series dataset, one chronological split, limited seeds, fixed seven-character plates, annotation-derived crops, and imbalanced image sources and province characters. The model has not been evaluated on other countries, variable-length plates, or a real detector pipeline. The laptop shutdown constrained some experiments; interrupted runs retain their incomplete status and are excluded from completed-result tables. Unrun ideas such as augmentation, rectification, and longer sweeps are not credited with measured improvements."
+  },
+  {
+    "kind": "paragraph",
+    "text": "Priorities for future work include repeated-seed OCR experiments when resources permit, evaluation across sources and cameras, improved recognition of difficult images, and validation-based forecasting lookback comparisons. Further research needs an appropriate holdout protocol to avoid optimizing against the test results already reported."
+  },
+  {
+    "kind": "heading",
+    "level": 1,
+    "text": "References",
+    "newpage": true
+  },
+  {
+    "kind": "paragraph",
+    "text": "[1] Zhou, H. et al. (2021). Informer: Beyond Efficient Transformer for Long Sequence Time-Series Forecasting. AAAI. Dataset and documentation: https://github.com/zhouhaoyi/ETDataset . Project uses ETTh1, not the Informer architecture."
+  },
+  {
+    "kind": "paragraph",
+    "text": "[2] Xu, Z. et al. (2018). Towards End-to-End License Plate Detection and Recognition: A Large Dataset and Baseline. ECCV. Dataset and annotation specification: https://github.com/detectRecog/CCPD ."
+  },
+  {
+    "kind": "paragraph",
+    "text": "[3] PyTorch. Sequence-to-sequence and attention tutorial: https://docs.pytorch.org/tutorials/intermediate/seq2seq_translation_tutorial.html ."
+  },
+  {
+    "kind": "paragraph",
+    "text": "[4] PyTorch. AdaptiveAvgPool1d documentation: https://docs.pytorch.org/docs/stable/generated/torch.nn.AdaptiveAvgPool1d.html ."
+  },
+  {
+    "kind": "paragraph",
+    "text": "[5] scikit-learn. R² score: https://scikit-learn.org/stable/modules/generated/sklearn.metrics.r2_score.html ."
+  },
+  {
+    "kind": "paragraph",
+    "text": "[6] Course materials. Final Project Requirements 2026; Final Major Assignment Report 2026 template; Deep Learning lectures supplied by Nguyễn Kim Ngân."
+  },
+  {
+    "kind": "paragraph",
+    "text": "[7] Group 6 project source, notebooks and published result tables: https://github.com/HelcurtLordno1/DeepLearning_final ."
+  },
+  {
+    "kind": "paragraph",
+    "text": "[8] CCPD image mirror used for acquisition, pinned revision 230a8d1092b7c8b0113541efe9861527275b5c04: https://huggingface.co/datasets/okita-souji/ccpd2019train ."
+  },
+  {
+    "kind": "heading",
+    "level": 1,
+    "text": "Appendix: Reproducibility and Result Provenance",
+    "newpage": true
+  },
+  {
+    "kind": "table",
+    "caption": "Measured parameters and runtime per run; fine-tuning time excludes preceding warm-start stages.",
+    "headers": [
+      "Run",
+      "Seed",
+      "Parameters",
+      "Best epoch",
+      "Train seconds"
+    ],
+    "rows": [
+      [
+        "task2",
+        "42",
+        "202497",
+        "5",
+        "17.30"
+      ],
+      [
+        "task2",
+        "123",
+        "202497",
+        "4",
+        "14.26"
+      ],
+      [
+        "task2",
+        "2026",
+        "202497",
+        "3",
+        "14.45"
+      ],
+      [
+        "Task 3: CNN–GRU attention",
+        "42",
+        "209539",
+        "79",
+        "1608.27"
+      ],
+      [
+        "Task 3: Aligned CNN–GRU",
+        "42",
+        "340739",
+        "4",
+        "929.11"
+      ],
+      [
+        "Task 3: Refined spatial CNN–GRU",
+        "42",
+        "642051",
+        "12",
+        "2498.18"
+      ]
+    ]
+  },
+  {
+    "kind": "paragraph",
+    "text": "Times come from recorded metadata, rather than inference latency measurements or a standardized model-speed benchmark. For Task 3, baseline and aligned costs must be included alongside refined costs when considering the complete warm-start chain. Pauses between sessions and report preparation are excluded from the recorded training times."
+  },
+  {
+    "kind": "paragraph",
+    "text": "Experiments used Python 3.12.10 and PyTorch 2.11.0+cu128 on Windows 11 with an RTX A4500 Laptop GPU with 16 GiB VRAM. The original Task 2 benchmarks used batch size 64 and enabled cuDNN autotuning, as recorded in metadata. Recovery/refined sessions after the shutdown used batch sizes no greater than 16, zero workers, two CPU threads, disabled cuDNN autotuning, and synchronized 50 ms pauses between batches. The monitor checks RAM, commit headroom, SSD space, GPU telemetry, and hardware events. These measures reduce risk but cannot guarantee prevention of every hardware failure."
+  },
+  {
+    "kind": "table",
+    "caption": "Relative artifact paths for verifying the reported measurements.",
+    "headers": [
+      "Artifact",
+      "Purpose"
+    ],
+    "rows": [
+      [
+        "data/splits/ccpd_subset.csv",
+        "Fixed 50,000-image manifest with plate-grouped holdouts"
+      ],
+      [
+        "run/selected_configs.json",
+        "Selected configurations and runs for both active tasks"
+      ],
+      [
+        "run/task3/final_selection.json",
+        "Checkpoint/configuration hashes and pre-test freeze time"
+      ],
+      [
+        "run/summary/all_test_metrics.csv",
+        "Test metrics by model, baseline, seed, and horizon"
+      ],
+      [
+        "run/<task>/<model>/<seed>/<run>/",
+        "Configuration, metadata, history, best checkpoint, predictions, and source snapshot"
+      ],
+      [
+        "run/verification/results_audit.json",
+        "Predictions checked against original labels and recomputed metrics"
+      ],
+      [
+        "report/benchmark/ and report/task3/",
+        "Published tables and figures traceable to local results"
+      ]
+    ]
+  },
+  {
+    "kind": "paragraph",
+    "text": "CCPD manifest SHA-256: afa052053851c3006e32921e8979733eb32f0567850de2d81eb16cdff3e43b30. This report was generated from saved artifacts without initializing CUDA or retraining. Running notebooks with TRAIN=False checks presentation of saved results; it is not a new training benchmark. The original lecturer template is unchanged. Its December 2025 cover date was updated to November 2026 to reflect the experiments."
+  },
+  {
+    "kind": "paragraph",
+    "text": "Membership and student IDs follow the information provided by Group 6. Đinh Nam Khánh is identified as group leader. No contribution percentages or individual task assignments are asserted without corresponding information from the group."
+  }
+]

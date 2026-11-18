@@ -1,68 +1,67 @@
-# Attention-Based Time Series Forecasting and License Plate Recognition
+# Attention-Based Multi-Step Forecasting and License Plate Recognition
 
-Deep Learning Final Project gồm ba bài: dự báo nhiệt độ dầu máy biến áp một bước, dự báo nhiều bước và nhận dạng biển số. Các notebook trình bày dữ liệu, model và kết quả thực nghiệm theo từng bước dễ đọc.
+Deep Learning final project — **Group 6, DSEB 65A**. Instructor: **Nguyễn Kim Ngân**.
 
-## Project Description
+The lecturer’s updated scope requires **Task 2 and Task 3 only**. Original task numbers are retained. Historical Task 1 files remain local and are excluded from Git.
 
-1. **Single-Step Time Series Forecasting:** Develop an LSTM model with Attention and residual forecasting to predict transformer oil temperature (`OT`) two hours ahead, using the previous 48 hourly observations of oil temperature and six electrical load variables from the ETTh1 dataset.
-2. **Multi-Step Time Series Forecasting:** Implement an Encoder–Decoder LSTM with Attention and residual forecasting to predict transformer oil temperature for the next five consecutive hours, using the same ETTh1 dataset, input window, and target variable.
-3. **License Plate Recognition:** Develop a CNN Encoder with a GRU Decoder and visual Attention to recognize complete seven-character Chinese license plates, including the province character, from annotation-cropped images using a fixed 50,000-image CCPD-Base subset.
+## Tasks and measured results
 
-Nội dung ba cột để điền sheet nằm trong [project_information.csv](report/project_information.csv).
-
-## Link to Download Data
-
-| Task | Dataset | Link |
+| Task | Problem and model | Locked test result |
 | --- | --- | --- |
-| 1 & 2 | ETTh1 — hourly electricity transformer data | [Download CSV](https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTh1.csv) · [Authors' repository](https://github.com/zhouhaoyi/ETDataset) |
-| 3 | CCPD-Base — fixed 50,000-image subset | [Official source and download instructions](https://github.com/detectRecog/CCPD) · [Pinned image mirror: train.zip](https://huggingface.co/datasets/okita-souji/ccpd2019train/resolve/230a8d1092b7c8b0113541efe9861527275b5c04/train.zip?download=true) |
+| 2 | ETTh1 oil temperature at `t+1 … t+5`, using an LSTM Encoder–Decoder with attention and residual forecasting | Macro RMSE **0.982309 ± 0.017116**, macro R²/NSE **0.874910**, 3 seeds |
+| 3 | Seven-character license plate recognition with a spatial CNN encoder, GRU decoder and visual attention | Full-plate accuracy **95.322%**, character accuracy **99.148%**, CER **0.846%**, one fine-tuning seed |
 
-ETTh1 chứa `OT` và sáu biến tải điện; Task 1–2 dùng cùng dữ liệu và target. File `train.zip` là nguồn ảnh gốc, **không phải tập train riêng của project**. Dùng danh sách 50.000 ảnh và grouped split đã lưu trong `data/splits/`; xem [hướng dẫn dữ liệu](data/raw/README.md).
+Task 2 reduces macro RMSE by **13.55%** against persistence. Its t+1 R² is approximately **0.9481**, while the five-horizon macro R² is **0.8749**. These are regression scores, distinct from Task 3’s recognition accuracy.
 
-## Kết quả test
+Task 3 correctly reads **7,132 of 7,482** test plates, improving full-plate accuracy by **32.56 percentage points** over the attention baseline. Its comparison combines architectural changes and additional warm-start training; it is not an isolated component ablation or a three-seed result.
 
-| Task | Bài toán | Model | Kết quả test |
-| --- | --- | --- | --- |
-| 1 | ETTh1: OT đúng `t+2` | LSTM + attention + residual | RMSE **0,846787 ± 0,007900**, 3 seed |
-| 2 | Cùng ETTh1: OT `t+1 … t+5` | LSTM Encoder–Decoder + attention | Macro RMSE **0,982309 ± 0,017116**, 3 seed |
-| 3 | Ảnh biển số → đủ 7 ký tự | Refined CNN + GRU decoder + attention | Đúng toàn biển **95,32%**, 1 seed fine-tune |
+## Notebooks
 
-Task 1–2 giảm RMSE **10,38% / 13,55%** so persistence. Task 3 trên **7.482 ảnh test**: đúng **7.132 biển**, character accuracy **99,15%**, CER **0,85%**. Baseline attention đạt **62,76%** toàn biển; model mới tăng **32,56 điểm phần trăm** trên cùng test. Không báo std qua nhiều seed cho Task 3.
+- [Task 2](task2/task2.ipynb): data checks, training-only EDA, exact target timestamps, visible model layers, validation selection, three-seed benchmarks and per-horizon errors.
+- [Task 3](task3/task3.ipynb): image/label inspection, grouped splits, visible CNN–GRU layers, warm-start explanations, locked test results and error examples.
 
-## Mở notebook
+Choose **Final Project (Windows .venv)** and Run All. `TRAIN=False` displays saved results, loads checkpoints on CPU and performs small demonstration forwards. It does not retrain the models.
 
-Mở `task1/task1.ipynb`, `task2/task2.ipynb` hoặc `task3/task3.ipynb`; chọn kernel **Final Project (Windows .venv)** rồi Run All.
+Task 2 retains its original simple model and training code. Two short analysis cells illustrate the 48-hour input/five-target window and persistence errors on training data. EDA motivates hypotheses; saved validation comparisons provide the evidence for selecting the model. A 48-hour lookback is a design choice, not a demonstrated optimum over unrun alternatives.
 
-Mặc định `TRAIN=False`: xem EDA, nạp checkpoint CPU, forward mẫu và hiển thị benchmark đã lưu. Không tự train lại để tạo output. Model, attention, optimizer, train step và shape hiện trong notebook; quản lý file và PowerShell nằm ngoài notebook. Bản HTML xem nhanh ở `run/notebook_review/`.
+**On a fresh clone:** notebook outputs and reports can be viewed immediately. Running all cells also requires raw data and the local checkpoints/result tables under `run/`. The repository excludes `.venv`, raw images, processed caches and full experiment directories. Downloading data alone does not restore checkpoint-viewing mode.
 
-**Khi clone từ GitHub:** output đã lưu trong notebook và báo cáo có thể xem ngay. Chạy lại toàn bộ notebook cần dữ liệu gốc cùng checkpoint/bảng kết quả trong `run/` trên máy cục bộ. Repository không kèm `.venv`, ảnh gốc, crop cache hoặc thư mục `run/`; chỉ tải dữ liệu chưa đủ để chạy chế độ xem checkpoint. Các bảng benchmark và kiểm tra đã được xuất sang `report/` để đọc trên GitHub.
+## Reports
 
-## Thư mục
+- [Complete English Word report](report/full_project/Group6_Final_Major_Assignment_Report_2026_EN.docx) and [PDF preview](report/full_project/Group6_Final_Major_Assignment_Report_2026_EN.pdf): Tasks 2 and 3, following the lecturer’s template structure.
+- [Public benchmark tables](report/benchmark/README.md) and [independent result audit](report/verification/results_audit.json).
+- [Task 3 detailed report](report/task3/task3_report.docx).
+- [Three-column registration information](report/project_information.csv).
+
+The revised report preserves the group cover and theoretical/practical/conclusion/reference structure. ETTh1 dataset and EDA material is included within Task 2 so it is self-contained. Earlier three-task reports are preserved in local `run/task23_revision/original/`.
+
+## Download data
+
+| Task | Dataset | Download |
+| --- | --- | --- |
+| 2 | ETTh1, hourly oil temperature and six electrical-load variables | [CSV](https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTh1.csv) · [Authors](https://github.com/zhouhaoyi/ETDataset) |
+| 3 | Fixed 50,000-image CCPD-Base cohort | [Official source](https://github.com/detectRecog/CCPD) · [Pinned train.zip mirror](https://huggingface.co/datasets/okita-souji/ccpd2019train/resolve/230a8d1092b7c8b0113541efe9861527275b5c04/train.zip?download=true) |
+
+Use the checked selection and manifest in `data/splits/`; the source archive’s name `train.zip` does not define our partitions. ETTh1 uses chronological 70/15/15 splits with training-fitted scalers. CCPD has **35,043 / 7,475 / 7,482** images, grouped by complete plate text. Recognition uses annotation-derived crops and is not full-image detection. See [data documentation](data/raw/README.md).
+
+## Layout
 
 ```text
-task1/ task2/ task3/   Notebook và README từng bài
-  code/               Model và code Python tương ứng
-src/                  Helper dữ liệu, metric và notebook
-scripts/              PowerShell, training launcher, kiểm tra, tạo report
-environment/          requirements.txt và requirements-cuda.txt
-data/raw/             Dữ liệu gốc, không sửa
-data/splits/          Manifest và vocabulary cố định
-data/processed/       Crop uint8 đọc theo batch
-run/                  Checkpoint, source snapshot, history, prediction và log
-report/task3/         Word, Markdown, bảng CSV và hình của Task 3
-report/benchmark/     Bảng kết quả cả ba task để xem trên GitHub
-report/verification/  Bằng chứng kiểm tra notebook và metric
-assignments/          Đề và tài liệu riêng, chỉ giữ local
-lessons_slides/       Bài giảng riêng, chỉ giữ local
+task2/ task3/         Presentation notebooks and task READMEs
+  code/              Models and training code
+src/                 Data, metric and notebook helpers
+scripts/             Preparation, guarded execution, verification and report tools
+environment/         Windows dependency lists
+data/splits/         Fixed manifests and vocabulary
+report/              English report, figures, benchmark and verification exports
+run/                 Local checkpoints, predictions, histories and safety logs
 ```
 
-Không còn `.py`, `.ps1` hoặc `.txt` rải ở root. `.venv`, `__pycache__` và `__init__.py` được ẩn trong Explorer của VS Code; đường dẫn môi trường và kernel giữ nguyên. Code/artifact trước khi chuyển có bản sao trong `run/layout_backup/`.
-
-Xem [scripts/README.md](scripts/README.md) để biết vai trò của các công cụ còn giữ. Các script một lần và công cụ cũ trùng chức năng đã được dọn; `src/` giữ hai helper mà notebook đang sử dụng.
+See [scripts/README.md](scripts/README.md) for the remaining tools. `task1/`, `assignments/`, `lessons_slides/`, `AGENTS.md` and `project_replan.md` are local-only. Ignoring Task 1 does not delete its local code or past results.
 
 ## Windows PowerShell
 
-Mở PowerShell tại root. Máy hiện tại đã có `.venv`; trên máy mới, chạy `scripts/setup_environment.ps1` trước. Sau đó:
+Use the project’s native Windows Python 3.12 `.venv`; no Linux/WSL Python environment is used for model work. On a new machine, first run `scripts/setup_environment.ps1`.
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
@@ -71,42 +70,17 @@ $env:PYTHONUTF8 = "1"
 python .\scripts\check_environment.py
 ```
 
-Nếu cần tạo/cài lại, dùng `scripts/setup_environment.ps1`. Python là `.venv\Scripts\python.exe`, chạy native Windows; không dùng môi trường Linux/WSL. GPU thực nghiệm: RTX A4500 Laptop 16 GiB.
-
-Kiểm tra notebook và kết quả khi không có training:
+When no training is active, verify the two notebooks and stored measurements:
 
 ```powershell
 .\.venv\Scripts\python.exe .\scripts\verify_presentation.py
 .\.venv\Scripts\python.exe .\scripts\verify_results.py
 ```
 
-Kiểm tra tài nguyên mà không train:
+Read-only resource check:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\run_experiments.ps1
 ```
 
-## Thực nghiệm Task 3
-
-Chuỗi đã chạy: attention baseline → aligned (4 epoch) → refined (12 epoch). Bản mới giữ chi tiết theo chiều cao, cung cấp bảy vùng trái–phải cho decoder, thêm hai Conv residual nhỏ và vị trí cột; tổng **642.051 tham số**. Không dùng OCR ngoài. Code ở `task3/code/`, config ở `task3/config/`.
-
-Checkpoint epoch 12 đạt **95,44% validation** và được khóa **trước khi mở test**. Hash và lựa chọn ở `run/task3/final_selection.json`. Đây là một seed fine-tune từ checkpoint đã học trên train; bảng so sánh phản ánh cả kiến trúc lẫn thời lượng fine-tuning. Các model đã khóa được bảo vệ khỏi tiếp tục train bằng launcher.
-
-Các phiên thật dùng `scripts/start_session.ps1` và monitor Windows: batch ≤16, 0 loader worker, CPU 2 luồng, nghỉ giữa batch, checkpoint/resume và kiểm tra RAM/commit/SSD/GPU/log phần cứng. Mỗi phiên hữu hạn; không tự retry safety stop. Lịch sử sự cố cũ và trial bị ngắt được giữ tại `run/safety/`. Không bật train hàng loạt từ notebook.
-
-## Dữ liệu và metric
-
-ETTh1 chia thời gian 70/15/15; scaler chỉ fit train. CCPD có **35.043 / 7.475 / 7.482 ảnh**, chia theo toàn chuỗi biển số, không trùng plate giữa các tập. Crop từ annotation, chưa đánh giá detector ảnh cả xe. Chi tiết: [data/raw/README.md](data/raw/README.md).
-
-Task 1–2 báo R², NSE, MAE và RMSE ở thang OT gốc; R²/NSE bằng nhau theo công thức residual. Task 2 phân biệt macro với pooled và có đủ năm horizon. Task 3 dùng full-plate accuracy, character accuracy và CER Levenshtein; bốn metric decoded one-hot được ghi rõ là phụ trợ, không hồi quy trên mã ký tự.
-
-## Báo cáo và bằng chứng
-
-- [Báo cáo Task 3 Word](report/task3/task3_report.docx) và [Markdown](report/task3/task3_report.md).
-- [Bảng test trước/sau](report/task3/test_benchmark.csv), [hình và bảng chi tiết](report/task3/).
-- [Kết quả cả ba task](report/benchmark/README.md), [bảng test](report/benchmark/all_test_metrics.csv).
-- [Đối chiếu dự đoán với nhãn gốc và metric](report/verification/results_audit.json), [kiểm tra output notebook](report/verification/presentation_checks.json).
-
-Các thư mục `assignments/`, `lessons_slides/` và hai file `AGENTS.md`, `project_replan.md` được giữ local và loại khỏi Git theo yêu cầu. Dữ liệu lớn, môi trường và experiment artifacts tiếp tục dùng quy tắc ignore sẵn có.
-
-Template Word và PDF đề gốc không bị sửa. Nội dung Task 3 mới có thể đưa vào báo cáo chung; tên nhóm và thông tin bìa cần điền theo nhóm của bạn.
+New training uses finite monitored sessions, batch ≤16, zero loader workers, two CPU threads, synchronized pauses, and RAM/commit/disk/GPU/hardware-event checks. Safety stops are not automatically retried. Frozen models are protected from continued development under the same run name. This revision adds presentation and analysis only; benchmark weights and splits are unchanged.

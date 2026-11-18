@@ -1,10 +1,7 @@
 Project Title,Project Description,Link to Download Data
-"Attention-Based Time Series Forecasting and License Plate Recognition","1. Single-Step Time Series Forecasting: Develop an LSTM model with Attention and residual forecasting to predict transformer oil temperature (OT) two hours ahead, using the previous 48 hourly observations of oil temperature and six electrical load variables from the ETTh1 dataset.
+Attention-Based Multi-Step Forecasting and License Plate Recognition,"2. Multi-Step Time Series Forecasting: Implement an Encoder-Decoder LSTM with Attention and residual forecasting to predict transformer oil temperature (OT) for the next five consecutive hours, using the previous 48 hours of ETTh1 oil temperature and six electrical load variables.
 
-2. Multi-Step Time Series Forecasting: Implement an Encoder-Decoder LSTM with Attention and residual forecasting to predict transformer oil temperature for the next five consecutive hours, using the same ETTh1 dataset, input window, and target variable.
+3. License Plate Recognition: Develop a spatial CNN Encoder with a GRU Decoder and visual Attention to recognize complete seven-character Chinese plates from annotation-derived crops in a fixed 50,000-image CCPD-Base cohort.","Task 2: ETTh1 CSV: https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTh1.csv
 
-3. License Plate Recognition: Develop a CNN Encoder with a GRU Decoder and visual Attention to recognize complete seven-character Chinese license plates, including the province character, from annotation-cropped images using a fixed 50,000-image CCPD-Base subset.","Task 1&2: ETTh1 hourly electricity transformer dataset (CSV): https://raw.githubusercontent.com/zhouhaoyi/ETDataset/main/ETT-small/ETTh1.csv
-
-Task 3: CCPD dataset, official source and download instructions: https://github.com/detectRecog/CCPD
-
-Pinned CCPD2019 image mirror used for the subset (train.zip): https://huggingface.co/datasets/okita-souji/ccpd2019train/resolve/230a8d1092b7c8b0113541efe9861527275b5c04/train.zip?download=true"
+Task 3: CCPD official source: https://github.com/detectRecog/CCPD
+Pinned image mirror: https://huggingface.co/datasets/okita-souji/ccpd2019train/resolve/230a8d1092b7c8b0113541efe9861527275b5c04/train.zip?download=true"

@@ -78,7 +78,7 @@ def main():
             if monitor.poll() is None:
                 monitor.terminate(); monitor.wait(timeout=10)
 
-        for folder in ["src", "scripts", "task1/code", "task2/code", "task3/code"]:
+        for folder in ["src", "scripts", "task2/code", "task3/code"]:
             for path in (utils.ROOT/folder).glob("*.py"):
                 compile(path.read_text(encoding="utf-8"), str(path), "exec")
         assert not torch.cuda.is_initialized()

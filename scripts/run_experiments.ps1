@@ -1,6 +1,6 @@
 param(
     [ValidateSet("Check", "Train", "Develop", "Evaluate")][string]$Mode = "Check",
-    [ValidateSet("task1", "task2", "task3")][string]$Task,
+    [ValidateSet("task2", "task3")][string]$Task,
     [ValidateRange(1, 10)][int]$Epochs = 2,
     [ValidateRange(1, 15)][int]$Minutes = 5,
     [ValidateSet(42, 123, 2026)][int]$Seed = 42,

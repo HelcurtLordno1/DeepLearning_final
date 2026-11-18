@@ -1,6 +1,6 @@
 # Các công cụ còn dùng
 
-Notebook và model nằm ở `task1/`, `task2/`, `task3/`. Thư mục này chỉ giữ công cụ chuẩn bị, vận hành và kiểm tra; không cần chạy tất cả các file.
+Notebook và model nằm ở `task2/`, `task3/`. Thư mục này chỉ giữ công cụ chuẩn bị, vận hành và kiểm tra; không cần chạy tất cả các file.
 
 | File | Dùng khi nào? |
 | --- | --- |
@@ -14,6 +14,7 @@ Notebook và model nằm ở `task1/`, `task2/`, `task3/`. Thư mục này chỉ
 | `verify_safety.py` | Kiểm tra lock, mất monitor và lưu checkpoint an toàn bằng CPU. |
 | `summarize_results.py` | Tổng hợp bảng kết quả từ các run đã khóa. |
 | `create_task3_report.py` | Tạo Word, Markdown, bảng và hình Task 3 từ kết quả thật. |
+| `create_full_report.py` | Tạo báo cáo Group 6 Task 2 và Task 3 bằng tiếng Anh theo mẫu Word của cô; cần template local trong `assignments/` và kết quả `run/`. |
 | `verify_task3_report.py` | Kiểm tra số liệu và hình trong báo cáo Task 3. |
 | `write_review_report.py` | Tạo bản review notebook và benchmark trong local `run/`. |
 | `evaluate_task3.py` | Đánh giá checkpoint đã khóa, được launcher có monitor gọi. |

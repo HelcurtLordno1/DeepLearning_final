@@ -54,7 +54,7 @@ def main():
     folder = ROOT/'run/notebook_review'
     (folder/'figures').mkdir(parents=True, exist_ok=True)
     records, checks = [], []
-    for task in ['task1', 'task2', 'task3']:
+    for task in ['task2', 'task3']:
         path = ROOT/task/(task+'.ipynb')
         book = nbformat.read(path, as_version=4)
         nbformat.validate(book)
@@ -93,6 +93,8 @@ print(json.dumps({"platform": sys.platform, "cuda_initialized": torch.cuda.is_in
                     figures += 1
                     image = output.data['image/png']
                     (folder/'figures'/f'{task}_{index:02d}_{figures}.png').write_bytes(base64.b64decode(image))
+                    role = cell.metadata.get('presentation_role', str(index))
+                    (folder/'figures'/f'{task}_{role}.png').write_bytes(base64.b64decode(image))
         assert figures >= 4, (task, 'Missing EDA/learning/prediction figures', figures)
         assert not warnings, (task, warnings)
         nbformat.write(book, path)

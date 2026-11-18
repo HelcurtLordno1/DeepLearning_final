@@ -1,0 +1,20 @@
+{
+  "active_tasks": [
+    "task2",
+    "task3"
+  ],
+  "tables": 16,
+  "figures": 14,
+  "template_sha256": "37b7977eeb7e49e872e538924c4b441e03214840406eba58b2ff7c74dda4cfe8",
+  "training_started": false,
+  "source": "reviewed English content and saved experiment artifacts",
+  "pdf_pages": 23,
+  "word_rendered": true,
+  "english_checked": true,
+  "no_task1_material": true,
+  "no_blank_pages": true,
+  "images_verified": true,
+  "benchmark_numbers_match": true,
+  "task2_original_core_cells_unchanged": true,
+  "task1_preserved_locally": true
+}

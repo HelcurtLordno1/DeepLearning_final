@@ -14,6 +14,7 @@ __pycache__/
 /AGENTS.md
 /project_replan.md
 /lessons_slides/
+/task1/
 
 # Local credentials and operating-system files.
 .env
@@ -23,3 +24,4 @@ __pycache__/
 *.pfx
 .DS_Store
 Thumbs.db
+~$*

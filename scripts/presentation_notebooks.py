@@ -45,7 +45,7 @@ def build(task):
              'task2': 'Dự báo 5 giờ bằng Encoder–Decoder',
              'task3': 'Nhận dạng chuỗi 7 ký tự biển số'}[task]
     objective = {'task1': 'Dùng 48 giờ quan sát để dự đoán một giá trị OT tại **t+2**.',
-                 'task2': 'Dùng cùng ETTh1 và OT như Task 1, dự đoán **t+1 đến t+5** bằng một decoder LSTM thật.',
+                 'task2': 'Dùng 48 giờ ETTh1 với target OT, dự đoán **t+1 đến t+5** bằng Encoder–Decoder LSTM có attention và residual.',
                  'task3': 'Từ ảnh biển số đã crop, dự đoán đủ **7 ký tự**, gồm ký tự tỉnh.'}[task]
     status = ('Đã có test độc lập cho cấu hình cuối với **3 seed: 42, 123, 2026**.' if forecast else
               ('Đã khóa cấu hình bằng validation và đánh giá test độc lập. Task 3 hiện có **một seed fine-tune**, không trình bày thành ba lần train độc lập.' if final_plate_test else
@@ -121,6 +121,34 @@ def build(task):
             plt.show()
             display(pd.DataFrame({"Lag (giờ)": lags, "Autocorrelation": autocorrelation}).round(3))
         ''', 'eda_lags')
+        if task == 'task2':
+            md('### A concrete five-hour forecast\n\nThe last observed hour is t. All five targets occur after t. This example uses only training data; the model will learn to predict the orange points from the blue history.')
+            code('''
+                example = train_data.iloc[:53]
+                plt.figure(figsize=(10, 3))
+                plt.plot(example.date.iloc[:48], example.OT.iloc[:48], label="Observed: 48 hours")
+                plt.plot(example.date.iloc[48:], example.OT.iloc[48:], "o--", label="Targets: next 5 hours")
+                plt.axvline(example.date.iloc[47], color="grey", linestyle=":", label="Last observed hour t")
+                plt.xlabel("Time")
+                plt.ylabel("OT")
+                plt.legend()
+                plt.tight_layout()
+                plt.show()
+            ''', 'eda_window')
+            md('### Why compare with persistence and learn a correction?\n\nFor each horizon, calculate future OT minus the last observed OT on training data. Larger corrections make a constant forecast harder. This motivates a residual hypothesis; validation measurements decide whether to retain it.')
+            code('''
+                changes = pd.DataFrame({f"t+{h}": train_data.OT.shift(-h) - train_data.OT
+                                        for h in range(1, 6)}).dropna()
+                training_baseline = pd.DataFrame({"MAE": changes.abs().mean(),
+                                                   "RMSE": np.sqrt(changes.pow(2).mean())})
+                display(training_baseline.round(4))
+                training_baseline.plot.bar(figsize=(8, 3), rot=0)
+                plt.title("Persistence errors on training data only")
+                plt.xlabel("Forecast horizon")
+                plt.ylabel("Error in original OT scale")
+                plt.tight_layout()
+                plt.show()
+            ''', 'eda_persistence')
         md('**Ý nghĩa cho mô hình:** OT gần đây là baseline mạnh, vì vậy cần so với persistence. Tự tương quan ở độ trễ dài có thể do cả xu hướng chậm; chưa đủ để kết luận có chu kỳ 24 giờ. Các hướng kiểm tra là input 24/48/72 giờ, OT đơn lẻ so với nhiều biến, và dự báo phần thay đổi (residual). Không coi các hướng chưa chạy là đã cải thiện điểm.')
         md('## 3. Chia dữ liệu và tạo cửa sổ\n\nChia 70% / 15% / 15% theo thời gian. Scaler chỉ fit train; mỗi cửa sổ nằm trọn trong một tập. Input có 48 giờ × 7 biến. `t` là timestamp cuối đã quan sát.')
         code('''
@@ -140,7 +168,7 @@ def build(task):
                                   "Quan sát cuối t": origin,
                                   "Target timestamp": parts["train"]["targets"][0]}))
         ''', 'split')
-        md('Ví dụ chỉ số: nếu input kết thúc tại 23:00, Task 1 dự đoán 01:00 ngày sau; Task 2 dự đoán lần lượt 00:00–04:00. Nhãn dự báo không xuất hiện trong input. Helper dùng StandardScaler: trừ trung bình train rồi chia độ lệch chuẩn train; metric cuối được đưa về thang OT gốc.')
+        md(('Ví dụ: input kết thúc tại 23:00 thì năm target là 00:00–04:00 ngày tiếp theo. ' if task=='task2' else 'Target là t+2. ')+'Nhãn dự báo không xuất hiện trong input. StandardScaler chỉ fit train; metric cuối được đưa về thang OT gốc.')
     else:
         md('**CCPD-Base:** 50.000 ảnh trong cohort đã chọn, crop theo bounding box annotation. Đây là nhận dạng khi đã biết vị trí biển số; chưa đánh giá detector từ ảnh cả xe.')
         code('''
@@ -190,6 +218,7 @@ def build(task):
             if architecture=='refined':
                 md('**Hai phần bổ sung:** nhánh residual gồm hai Conv 3×3 hiệu chỉnh nét từ CNN; vector vị trí cho 48 cột giúp attention phân biệt trái/phải. Nhánh mới và vector vị trí bắt đầu bằng 0 để giữ nguyên dự đoán của checkpoint khởi tạo. Mô hình vẫn là CNN encoder → GRU decoder → attention, không dùng OCR ngoài.')
                 md('**Chuỗi học thật:** checkpoint baseline attention → aligned → refined. Refined nạp trọng số aligned, không nạp trực tiếp baseline cũ. Mỗi giai đoạn có history riêng; learning curve bên dưới chỉ là giai đoạn refined.')
+                md('**Why these additions?**\n\n- The height projection preserves upper/lower character detail.\n- Seven local regions give the GRU an ordered spatial cue; column positions distinguish left from right.\n- The small residual branch adjusts CNN features while preserving the warm-start prediction at initialization.\n\nThe measured improvement combines architecture changes and extra training. It is not an isolated ablation of each component, and the final model has one fine-tuning seed.')
         else:
             md('**Luồng baseline:** `[B,3,64,192]` → CNN `[B,128,8,48]` → trung bình chiều cao → 48 cột `[B,48,128]` → GRU 7 bước → attention → Linear → logits `[B,7,67]`. Argmax ở mỗi vị trí tạo chuỗi.')
     code(definition(model_source, model_name), 'model')
@@ -281,6 +310,8 @@ def build(task):
         plt.show()
         display(validation_comparison(TASK))
     ''', 'learning_curves')
+    if task == 'task2':
+        md('### How the evidence leads to the final model\n\n| Evidence | Decision |\n| --- | --- |\n| Ordered hourly observations and short-term continuity | Use an LSTM and retain persistence as a strong baseline. |\n| Five future values are required | Use a real five-step recurrent decoder. |\n| Training changes motivate corrections | Test residual forecasting; retain it based on validation. |\n| Attention helps some configurations but not all | Compare measured validation RMSE, rather than assume a benefit. |\n| seq128_attention_residual has the lowest measured validation RMSE | Freeze that configuration, then report three seeds on test. |\n\nThe 48-hour input is a design choice. Lookbacks 24/72 were not fully benchmarked, so EDA does not establish that 48 is optimal. New training-only EDA explains the saved experiment; it is not a new model-selection experiment.')
     if forecast:
         md('MSE train và RMSE validation có thang đo khác nhau nên vẽ hai trục riêng. Bảng so sánh cho thấy attention không luôn giúp: ở Task 2, `seq64_attention_residual` kém `seq64_residual`; cấu hình H=128 mới cho validation tốt nhất. Vì vậy không quy mọi cải thiện cho attention.' if task=='task2' else
            'MSE train và RMSE validation có thang đo khác nhau nên vẽ hai trục riêng. So sánh RNN, LSTM, attention và residual giúp thấy phần nào tạo cải thiện. Cấu hình cuối có H=128; không dùng test để chọn lại lookback hoặc model.')
@@ -415,7 +446,7 @@ def build(task):
 def main():
     backup = ROOT/'run/notebook_backups'/datetime.now().strftime('%Y%m%d_%H%M%S_%f')
     backup.mkdir(parents=True)
-    for task in ['task1', 'task2', 'task3']:
+    for task in ['task2', 'task3']:
         path = ROOT/task/(task+'.ipynb')
         shutil.copy2(path, backup/path.name)
         nb.write(build(task), path)

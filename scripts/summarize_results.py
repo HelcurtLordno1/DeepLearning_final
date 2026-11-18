@@ -10,7 +10,7 @@ from utils import ROOT
 
 def main():
     rows, forecast_predictions, plate_predictions = [], [], []
-    for task in ["task1", "task2", "task3"]:
+    for task in ["task2", "task3"]:
         lock = ROOT/"run"/task/"locked_test_runs.json"
         if not lock.exists(): continue
         for relative in json.loads(lock.read_text(encoding="utf-8")):
@@ -43,16 +43,17 @@ def main():
         pd.concat(plate_predictions, ignore_index=True).to_csv(output/"plate_test_predictions.csv", index=False, encoding="utf-8")
     if frame.empty: return
     selections = json.loads((ROOT/"run"/"selected_configs.json").read_text(encoding="utf-8"))
+    selections = {task: item for task, item in selections.items() if task in ["task2", "task3"]}
     selected = pd.concat([frame[(frame["task"] == task) & (frame["name"] == item["config"]["name"]) & (frame["model"] == "model")]
                           for task, item in selections.items()], ignore_index=True)
     metrics = [m for m in ["R2", "NSE", "MAE", "RMSE", "plate_accuracy", "character_accuracy", "CER"] if m in frame]
     summary = selected.groupby(["task", "name", "horizon"])[metrics].agg(["count", "mean", "std"])
     summary.to_csv(output/"selected_models_seed_summary.csv")
     # Keep the old three-seed table scoped to the forecasting experiments.
-    summary.loc[summary.index.get_level_values('task').isin(['task1','task2'])].to_csv(output/"selected_models_three_seeds.csv")
+    summary.loc[summary.index.get_level_values('task').isin(['task2'])].to_csv(output/"selected_models_three_seeds.csv")
     lines = ["# Actual experiment results", "", "All model choices used validation only. Runtime: Windows Python 3.12 and CUDA.",
              "", "See all_test_metrics.csv for baselines and every horizon; selected_models_seed_summary.csv contains actual count/mean/sample-standard-deviation. A single seed has no estimated seed standard deviation.", ""]
-    pending = [task for task in ["task1", "task2", "task3"] if task not in selections]
+    pending = [task for task in ["task2", "task3"] if task not in selections]
     if pending:
         lines.extend(["Unfinished final experiments: "+", ".join(pending)+". Completed validation trials are not final test/three-seed results.", ""])
     if (ROOT/"run/safety/INCIDENT.md").exists():

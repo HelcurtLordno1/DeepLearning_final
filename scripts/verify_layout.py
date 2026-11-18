@@ -5,12 +5,11 @@ import ast
 import json
 import sys
 from bootstrap import ROOT
-for folder in ['src','scripts','task1/code','task2/code','task3/code']:
+for folder in ['src','scripts','task2/code','task3/code']:
     for path in (ROOT/folder).glob('*.py'):
         compile(path.read_text(encoding='utf-8'),str(path),'exec')
 from utils import ROOT as data_root
 assert data_root == ROOT
-from task1.code.task1 import ForecastRNN
 from task2.code.task2 import ForecastSeq2Seq
 from task3.code.task3 import PlateSeq2Seq, AlignedPlateSeq2Seq
 from task3.code.refined_model import RefinedPlateSeq2Seq

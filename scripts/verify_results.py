@@ -27,7 +27,8 @@ def assert_scores(record, recalculated, prefix=""):
 def audit_forecast(path, task, raw):
     predictions = pd.read_csv(path/"test_predictions.csv", parse_dates=["origin_time", "target_time"])
     scores = pd.read_csv(path/"test_metrics.csv")
-    horizons, expected_count = ([2], 2564) if task == "task1" else ([1, 2, 3, 4, 5], 2561)
+    assert task == "task2"
+    horizons, expected_count = [1, 2, 3, 4, 5], 2561
     assert len(predictions) == expected_count*len(horizons)
     assert set(predictions["horizon"]) == set(horizons)
     delta_hours = (predictions["target_time"]-predictions["origin_time"]).dt.total_seconds()/3600
@@ -87,7 +88,7 @@ def audit_plates(path, manifest):
 
 def audit_notebooks():
     records = json.loads((ROOT/"run/notebook_execution.json").read_text(encoding="utf-8"))
-    assert {record["task"] for record in records} == {"task1", "task2", "task3"}
+    assert {record["task"] for record in records} == {"task2", "task3"}
     for record in records:
         task = record["task"]
         path = ROOT/task/(task+".ipynb")
@@ -100,7 +101,7 @@ def audit_notebooks():
         # Presentation cells omit CLI/file management but retain the actual model,
         # attention and training step, rather than a different illustrative network.
         roles = {cell["metadata"].get("presentation_role"): "".join(cell["source"]) for cell in cells}
-        model_name = notebook["metadata"].get("report_model_class", {"task1": "ForecastRNN", "task2": "ForecastSeq2Seq", "task3": "PlateSeq2Seq"}[task])
+        model_name = notebook["metadata"].get("report_model_class", {"task2": "ForecastSeq2Seq", "task3": "PlateSeq2Seq"}[task])
         step_name = "plate_train_step" if task == "task3" else "forecast_train_step"
         model_file = ROOT/notebook["metadata"].get("report_model_source",task+"/code/"+task+".py")
         definitions = [("model", model_file, model_name),
@@ -113,7 +114,7 @@ def audit_notebooks():
             definition = next(node for node in original.body if getattr(node, "name", None) == name)
             shown = ast.parse(roles[role]).body[0]
             assert ast.dump(definition) == ast.dump(shown), (task, role)
-    return {"fresh_windows_kernels": 3, "executed_without_errors": True,
+    return {"fresh_windows_kernels": 2, "executed_without_errors": True,
             "paired_model_attention_training_step_match": True}
 
 
@@ -123,7 +124,7 @@ def main():
     raw = pd.read_csv(ROOT/"data/raw/etth1/ETTh1.csv", parse_dates=["date"]).set_index("date")
     manifest = pd.read_csv(ROOT/"data/splits/ccpd_subset.csv")
     checked = []
-    for task in ["task1", "task2", "task3"]:
+    for task in ["task2", "task3"]:
         lock = ROOT/"run"/task/"locked_test_runs.json"
         if not lock.exists(): continue
         paths = json.loads(lock.read_text(encoding="utf-8"))
@@ -137,7 +138,7 @@ def main():
             audit_plates(path, manifest) if task == "task3" else audit_forecast(path, task, raw)
         checked.append({"task": task, "checked_test_runs": len(paths), "passed": True})
         print(task, "saved predictions, original labels, horizons, and metrics: PASS", flush=True)
-    report = {"checked": checked, "all_three_tasks_finished": len(checked) == 3}
+    report = {"checked": checked, "all_active_tasks_finished": len(checked) == 2, "active_tasks": ["task2", "task3"]}
     selection_path = ROOT/'run/task3/final_selection.json'
     if selection_path.exists():
         selection = json.loads(selection_path.read_text(encoding='utf-8'))
@@ -155,7 +156,7 @@ def main():
         report['task3_completed_fine_tuning_seeds'] = selection['final_seeds']
     if (ROOT/"run/notebook_execution.json").exists():
         report["notebooks"] = audit_notebooks()
-        print("Three fresh Windows notebooks and their paired scripts: PASS", flush=True)
+        print("Two active Windows notebooks and their paired scripts: PASS", flush=True)
     save_json(ROOT/"run/verification/results_audit.json", report)
 
 

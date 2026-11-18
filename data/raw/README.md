@@ -20,9 +20,9 @@ For comparison, the complete official CCPD2019 archive is 12.3 GiB and its XZ in
 - Checked: finite numeric values, unique timestamps, and uninterrupted hourly spacing.
 - Details and SHA-256: `etth1/metadata.json`.
 
-Use this same CSV for both forecasting tasks. Fit scalers on training rows only. The plan specifies chronological raw-row counts of 12,194 / 2,613 / 2,613 before windowing.
+Use this CSV for Task 2 in the revised two-task submission. Fit scalers on training rows only. The plan specifies chronological raw-row counts of 12,194 / 2,613 / 2,613 before windowing.
 
-For a concrete first sample, 48 input rows cover 2016-07-01 00:00 through 2016-07-02 23:00. Task 1 targets 2016-07-03 01:00; Task 2 targets 2016-07-03 00:00 through 04:00 under the plan's working timing convention. The actual target values are recorded in `etth1/metadata.json`.
+For a concrete first sample, 48 input rows cover 2016-07-01 00:00 through 2016-07-02 23:00. Task 2 targets 2016-07-03 00:00 through 04:00 under the plan's working timing convention. The actual target values are recorded in `etth1/metadata.json`.
 
 ## CCPD-Base — downloaded and checked
 
